@@ -6,15 +6,18 @@ use App\Models\JobApplication;
 use App\Http\Requests\StoreJobApplicationRequest;
 use App\Http\Requests\UpdateJobApplicationRequest;
 use App\Http\Resources\JobApplicationResource;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 class JobApplicationController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        //
+        $jobApplications = $request->user()->jobApplications()->latest()->get();
+
+        return JobApplicationResource::collection($jobApplications);
     }
 
     /**
@@ -48,8 +51,12 @@ class JobApplicationController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(JobApplication $jobApplication)
+    public function destroy(Request $request, JobApplication $jobApplication)
     {
-        //
+        abort_if($jobApplication->user_id !== $request->user()->id, 403);
+
+        $jobApplication->delete();
+
+        return response()->noContent();
     }
 }

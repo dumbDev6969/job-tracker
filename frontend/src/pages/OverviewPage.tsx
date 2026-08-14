@@ -1,10 +1,13 @@
 import { PagePlaceholder } from "./PagePlaceholder"
-
+import { Jobs } from "../features/job-track"
 export function OverviewPage() {
   return (
     <PagePlaceholder
-      title="Overview"
-      description="Your job search summary and recent activity will show up here."
-    />
+      title="Job Applications"
+      description="Track your job applications and their statuses."
+      
+    >
+      <Jobs />
+    </PagePlaceholder>
   )
 }
