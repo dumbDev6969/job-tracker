@@ -17,7 +17,7 @@ function App() {
   return (
     <AuthSessionProvider>
       <Routes>
-        <Route path="/" element={<Navigate to="/overview" replace />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />

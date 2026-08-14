@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button"
+import { JobForm } from "@/features/job-track"
+
 import { PagePlaceholder } from "./PagePlaceholder"
 
 export function JobsPage() {
@@ -5,6 +8,42 @@ export function JobsPage() {
     <PagePlaceholder
       title="Jobs"
       description="Track and manage your job applications here."
-    />
+      actions={
+        <Button type="button" variant="outline" className="gap-2">
+          Add job
+        </Button>
+      }
+      className="max-w-6xl"
+    >
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.8fr)]">
+        <JobForm />
+
+        <aside className="space-y-4">
+          <div className="rounded-2xl border border-border bg-muted/30 p-4">
+            <p className="text-sm font-medium text-muted-foreground">Pipeline</p>
+            <div className="mt-4 space-y-3">
+              {[
+                { label: "Saved", value: "04" },
+                { label: "Applied", value: "12" },
+                { label: "Interviewing", value: "03" },
+                { label: "Offers", value: "01" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center justify-between rounded-xl bg-background px-3 py-2">
+                  <span className="text-sm text-muted-foreground">{item.label}</span>
+                  <span className="text-sm font-semibold text-foreground">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-primary/5 p-4">
+            <p className="text-sm font-medium text-primary">Next tip</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Log every application as soon as you send it to keep your follow-up pipeline accurate.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </PagePlaceholder>
   )
 }
