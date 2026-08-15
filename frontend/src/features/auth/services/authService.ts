@@ -14,6 +14,10 @@ export async function login(payload: LoginRequestPayload) {
   return api.post("/login", payload)
 }
 
+export async function logout() {
+  return api.post("/logout")
+}
+
 export async function getCurrentUser() {
   const response = await api.get<AuthUser>("/api/user")
   return response.data

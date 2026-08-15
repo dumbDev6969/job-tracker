@@ -57,4 +57,49 @@ class JobApplicationControllerTest extends TestCase
         $response->assertForbidden();
         $this->assertDatabaseHas('job_applications', ['id' => $jobApplication->id]);
     }
+
+    public function test_show_returns_the_owners_job_application(): void
+    {
+        $user = User::factory()->create();
+        $jobApplication = $this->createJobApplication($user);
+
+        $response = $this->actingAs($user)->getJson("/api/job-applications/{$jobApplication->id}");
+
+        $response->assertOk();
+        $response->assertJsonPath('data.id', $jobApplication->id);
+        $response->assertJsonPath('data.company', 'Acme Corp');
+    }
+
+    public function test_show_forbids_viewing_another_users_job_application(): void
+    {
+        $user = User::factory()->create();
+        $otherUser = User::factory()->create();
+        $jobApplication = $this->createJobApplication($otherUser);
+
+        $response = $this->actingAs($user)->getJson("/api/job-applications/{$jobApplication->id}");
+
+        $response->assertForbidden();
+    }
+
+    public function test_update_updates_the_owners_job_application(): void
+    {
+        $user = User::factory()->create();
+        $jobApplication = $this->createJobApplication($user);
+
+        $response = $this->actingAs($user)->putJson("/api/job-applications/{$jobApplication->id}", [
+            'company' => 'New Company',
+            'role' => 'Lead Engineer',
+            'status' => 'interviewing',
+            'interview_date' => '2026-09-01T10:00:00',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('data.company', 'New Company');
+        $response->assertJsonPath('data.status', 'interviewing');
+        $this->assertDatabaseHas('job_applications', [
+            'id' => $jobApplication->id,
+            'company' => 'New Company',
+            'status' => 'interviewing',
+        ]);
+    }
 }

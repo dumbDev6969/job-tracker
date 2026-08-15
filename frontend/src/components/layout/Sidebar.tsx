@@ -1,7 +1,9 @@
+import { useState } from "react"
 import { ArrowUpRight, LogOut } from "lucide-react"
-import { NavLink } from "react-router-dom"
+import { NavLink, useNavigate } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
+import { useAuthSession } from "@/features/auth"
 import { cn } from "@/lib/utils"
 
 import { navItems } from "./nav-config"
@@ -10,7 +12,51 @@ type SidebarProps = {
   className?: string
 }
 
+function getUserInitials(name: string | null | undefined) {
+  if (!name) {
+    return "?"
+  }
+
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+
+  if (parts.length === 0) {
+    return "?"
+  }
+
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+}
+
 export function Sidebar({ className }: SidebarProps) {
+  const navigate = useNavigate()
+  const { signOut, user } = useAuthSession()
+
+  const [isSigningOut, setIsSigningOut] = useState(false)
+  const [logoutError, setLogoutError] = useState<string | null>(null)
+
+  const handleLogout = async () => {
+    setLogoutError(null)
+    setIsSigningOut(true)
+
+    try {
+      await signOut()
+      navigate("/login", { replace: true })
+    } catch {
+      setLogoutError("Unable to log out right now. Please try again.")
+    } finally {
+      setIsSigningOut(false)
+    }
+  }
+
+  const userName = user?.name ?? "Unknown user"
+  const userEmail = user?.email ?? "No email available"
+  const userInitials = getUserInitials(user?.name)
+
   return (
     <aside
       className={cn(
@@ -78,24 +124,37 @@ export function Sidebar({ className }: SidebarProps) {
         <div className="flex items-center justify-between rounded-xl bg-muted/80 p-2.5">
           <div className="flex items-center gap-3">
             <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              AM
+              {userInitials}
             </div>
             <div>
-              <p className="text-sm font-medium text-foreground">Alicia Moore</p>
-              <p className="text-xs text-muted-foreground">Product Designer</p>
+              <p className="text-sm font-medium text-foreground">{userName}</p>
+              <p className="text-xs text-muted-foreground">{userEmail}</p>
             </div>
           </div>
-          <Button type="button" variant="ghost" size="icon" aria-label="Open profile">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Open profile"
+            onClick={() => navigate("/profile")}
+          >
             <ArrowUpRight className="size-4" />
           </Button>
         </div>
 
-        <Button type="button" variant="outline" className="w-full justify-between gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-between gap-2"
+          onClick={handleLogout}
+          disabled={isSigningOut}
+        >
           <span className="flex items-center gap-2">
             <LogOut className="size-4" />
-            Log out
+            {isSigningOut ? "Logging out..." : "Log out"}
           </span>
         </Button>
+        {logoutError ? <p className="text-sm text-destructive">{logoutError}</p> : null}
       </div>
     </aside>
   )

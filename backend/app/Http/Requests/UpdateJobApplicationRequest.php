@@ -12,7 +12,7 @@ class UpdateJobApplicationRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -23,7 +23,16 @@ class UpdateJobApplicationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'company' => ['sometimes', 'required', 'string', 'max:255'],
+            'role' => ['sometimes', 'required', 'string', 'max:255'],
+            'status' => ['sometimes', 'required', 'string', 'in:saved,applied,interviewing,offered,rejected'],
+            'applied_date' => ['nullable', 'date'],
+            'url' => ['nullable', 'url'],
+            'contact' => ['nullable', 'string', 'max:255'],
+            'referral' => ['nullable', 'boolean'],
+            'notes' => ['nullable', 'string'],
+            'follow_up_date' => ['nullable', 'date'],
+            'interview_date' => ['nullable', 'date'],
         ];
     }
 }

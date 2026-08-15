@@ -7,6 +7,7 @@ import { AppLayout } from '@/layouts/AppLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import {
   CalendarPage,
+  JobDetailPage,
   JobsPage,
   MessagesPage,
   OverviewPage,
@@ -28,6 +29,7 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/overview" element={<OverviewPage />} />
             <Route path="/jobs" element={<JobsPage />} />
+            <Route path="/jobs/:id" element={<JobDetailPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/messages" element={<MessagesPage />} />
             <Route path="/profile" element={<ProfilePage />} />

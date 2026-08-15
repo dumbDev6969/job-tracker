@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useNavigate } from "react-router-dom"
 
 import {
   columnFacetingFeature,
@@ -8,12 +9,10 @@ import {
   createFacetedRowModel,
   createFacetedUniqueValues,
   createFilteredRowModel,
-  createPaginatedRowModel,
   createSortedRowModel,
   filterFn_arrIncludesSome,
   filterFn_includesString,
   globalFilteringFeature,
-  rowPaginationFeature,
   rowSelectionFeature,
   rowSortingFeature,
   sortFn_alphanumeric,
@@ -29,12 +28,14 @@ import {
   Inbox,
   Loader2,
   MoreHorizontal,
+  Pencil,
   PlusCircle,
   RefreshCw,
   Trash2,
 } from "lucide-react"
 
 import { ConfirmDialog } from "@/components/ConfirmDialog"
+import { EditJobModal } from "./EditJobModal"
 import { EmptyState } from "@/components/EmptyState"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -52,8 +53,9 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuGroupLabel,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -89,8 +91,6 @@ const features = tableFeatures({
   rowSortingFeature,
   sortedRowModel: createSortedRowModel(),
   sortFns: { alphanumeric: sortFn_alphanumeric },
-  rowPaginationFeature,
-  paginatedRowModel: createPaginatedRowModel(),
 })
 
 type Features = typeof features
@@ -114,6 +114,33 @@ const COLUMN_LABELS: Record<string, string> = {
   company: "Company",
   role: "Role",
   applied_date: "Applied",
+}
+
+type JobsPagination = {
+  currentPage: number
+  lastPage: number
+  total: number
+  hasPreviousPage: boolean
+  hasNextPage: boolean
+}
+
+type JobsCache = {
+  jobs: JobApplication[]
+  pagination: JobsPagination
+}
+
+const DEFAULT_PAGINATION: JobsPagination = {
+  currentPage: 1,
+  lastPage: 1,
+  total: 0,
+  hasPreviousPage: false,
+  hasNextPage: false,
+}
+
+let jobsCacheByPage = new Map<number, JobsCache>()
+
+export function clearJobsCache() {
+  jobsCacheByPage.clear()
 }
 
 function formatDate(value: string | null) {
@@ -156,10 +183,11 @@ function SortableHeader<TValue>({
 
 type RowActionsProps = {
   job: JobApplication
+  onEditRequest: (job: JobApplication) => void
   onDeleteRequest: (job: JobApplication) => void
 }
 
-function RowActions({ job, onDeleteRequest }: RowActionsProps) {
+function RowActions({ job, onEditRequest, onDeleteRequest }: RowActionsProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -170,11 +198,17 @@ function RowActions({ job, onDeleteRequest }: RowActionsProps) {
         }
       />
       <DropdownMenuContent align="end">
-        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-        <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(job.id))}>
-          <Copy />
-          Copy job ID
-        </DropdownMenuItem>
+        <DropdownMenuGroup>
+          <DropdownMenuGroupLabel>Actions</DropdownMenuGroupLabel>
+          <DropdownMenuItem onClick={() => onEditRequest(job)}>
+            <Pencil />
+            Edit job
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(job.id))}>
+            <Copy />
+            Copy job ID
+          </DropdownMenuItem>
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={() => onDeleteRequest(job)}>
           <Trash2 />
@@ -288,27 +322,66 @@ function StatusFacetedFilter({
 }
 
 export function Jobs() {
-  const [jobs, setJobs] = useState<JobApplication[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const navigate = useNavigate()
+  const initialCache = jobsCacheByPage.get(1)
+  const [jobs, setJobs] = useState<JobApplication[]>(() => initialCache?.jobs ?? [])
+  const [pagination, setPagination] = useState<JobsPagination>(
+    () => initialCache?.pagination ?? DEFAULT_PAGINATION
+  )
+  const [isLoading, setIsLoading] = useState(() => jobsCacheByPage.size === 0)
+  const [isFetchingPage, setIsFetchingPage] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [editingTarget, setEditingTarget] = useState<JobApplication | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<JobApplication | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const loadJobs = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const data = await listJobApplications()
-      setJobs(data)
-    } catch {
-      setError("Failed to load job applications.")
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  const loadJobs = useCallback(
+    async (page = 1, showLoading = false) => {
+      const cached = jobsCacheByPage.get(page)
+
+      if (cached) {
+        setJobs(cached.jobs)
+        setPagination(cached.pagination)
+        setIsLoading(false)
+      } else if (showLoading || jobsCacheByPage.size === 0) {
+        setIsLoading(true)
+      }
+
+      setIsFetchingPage(true)
+      setError(null)
+      try {
+        const response = await listJobApplications(page)
+        const nextPagination: JobsPagination = {
+          currentPage: response.meta.current_page,
+          lastPage: response.meta.last_page,
+          total: response.meta.total,
+          hasPreviousPage: response.links.prev !== null,
+          hasNextPage: response.links.next !== null,
+        }
+
+        const newCache: JobsCache = {
+          jobs: response.data,
+          pagination: nextPagination,
+        }
+        jobsCacheByPage.set(page, newCache)
+
+        setJobs(response.data)
+        setPagination(nextPagination)
+      } catch {
+        if (!cached) {
+          setError("Failed to load job applications.")
+        }
+      } finally {
+        setIsLoading(false)
+        setIsFetchingPage(false)
+      }
+    },
+    []
+  )
 
   useEffect(() => {
-    void loadJobs()
+    const hasInitialData = jobsCacheByPage.has(1)
+    void loadJobs(1, !hasInitialData)
   }, [loadJobs])
 
   const columns = useMemo(
@@ -363,7 +436,11 @@ export function Jobs() {
           id: "actions",
           header: () => <span className="sr-only">Actions</span>,
           cell: ({ row }) => (
-            <RowActions job={row.original} onDeleteRequest={setDeleteTarget} />
+            <RowActions
+              job={row.original}
+              onEditRequest={setEditingTarget}
+              onDeleteRequest={setDeleteTarget}
+            />
           ),
           enableHiding: false,
         }),
@@ -376,9 +453,6 @@ export function Jobs() {
     columns,
     data: jobs,
     getRowId: (row) => String(row.id),
-    initialState: {
-      pagination: { pageIndex: 0, pageSize: 10 },
-    },
     globalFilterFn: "includesString",
     getColumnCanGlobalFilter: (column) => column.id === "company" || column.id === "role",
   })
@@ -396,8 +470,13 @@ export function Jobs() {
     setIsDeleting(true)
     try {
       await deleteJobApplication(deleteTarget.id)
-      setJobs((prev) => prev.filter((job) => job.id !== deleteTarget.id))
+      const targetPage =
+        pagination.currentPage > 1 && jobs.length === 1
+          ? pagination.currentPage - 1
+          : pagination.currentPage
+      jobsCacheByPage.clear()
       setDeleteTarget(null)
+      await loadJobs(targetPage, false)
     } catch {
       setError("Failed to delete the job application. Please try again.")
     } finally {
@@ -438,7 +517,22 @@ export function Jobs() {
     )
   } else {
     bodyContent = rows.map((row) => (
-      <TableRow key={row.id} data-state={row.getIsSelected() ? "selected" : undefined}>
+      <TableRow
+        key={row.id}
+        data-state={row.getIsSelected() ? "selected" : undefined}
+        className="cursor-pointer hover:bg-muted/50"
+        onClick={(event) => {
+          const target = event.target as HTMLElement
+          if (
+            target.closest('[role="checkbox"]') ||
+            target.closest("button") ||
+            target.closest('[role="menuitem"]')
+          ) {
+            return
+          }
+          navigate(`/jobs/${row.original.id}`)
+        }}
+      >
         {row.getVisibleCells().map((cell) => (
           <TableCell key={cell.id}>
             <table.FlexRender cell={cell} />
@@ -453,7 +547,13 @@ export function Jobs() {
       {error ? (
         <div className="flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           <span>{error}</span>
-          <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => void loadJobs()}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => void loadJobs(pagination.currentPage, true)}
+          >
             <RefreshCw className="size-3.5" />
             Retry
           </Button>
@@ -496,7 +596,7 @@ export function Jobs() {
         </DropdownMenu>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border">
+      <div className={cn("overflow-hidden rounded-xl border border-border transition-opacity duration-200", isFetchingPage && "opacity-60")}>
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -515,15 +615,18 @@ export function Jobs() {
 
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {selectedCount} of {totalCount} row(s) selected.
+          {selectedCount} of {totalCount} row(s) selected on this page.
         </p>
         <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Page {pagination.currentPage} of {pagination.lastPage} ({pagination.total} total)
+          </span>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => void loadJobs(pagination.currentPage - 1, false)}
+            disabled={!pagination.hasPreviousPage || isFetchingPage}
           >
             Previous
           </Button>
@@ -531,9 +634,10 @@ export function Jobs() {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            onClick={() => void loadJobs(pagination.currentPage + 1, false)}
+            disabled={!pagination.hasNextPage || isFetchingPage}
           >
+            {isFetchingPage ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
             Next
           </Button>
         </div>
@@ -552,6 +656,18 @@ export function Jobs() {
         isLoading={isDeleting}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <EditJobModal
+        job={editingTarget}
+        open={editingTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditingTarget(null)
+        }}
+        onSuccess={() => {
+          jobsCacheByPage.clear()
+          void loadJobs(pagination.currentPage, false)
+        }}
       />
     </div>
   )

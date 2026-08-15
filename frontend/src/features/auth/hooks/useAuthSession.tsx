@@ -8,7 +8,7 @@ import {
 } from "react"
 import axios from "axios"
 
-import { getCurrentUser } from "@/features/auth/services/authService"
+import { getCurrentUser, logout } from "@/features/auth/services/authService"
 import type { AuthUser } from "@/features/auth/types"
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "error"
@@ -19,6 +19,7 @@ type AuthSessionContextValue = {
   errorMessage: string | null
   isAuthenticated: boolean
   refreshSession: () => Promise<void>
+  signOut: () => Promise<void>
 }
 
 const AuthSessionContext = createContext<AuthSessionContextValue | undefined>(
@@ -75,6 +76,32 @@ export function AuthSessionProvider({
     }
   }, [])
 
+  const signOut = useCallback(async () => {
+    setErrorMessage(null)
+
+    try {
+      await logout()
+      setUser(null)
+      setStatus("unauthenticated")
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        setUser(null)
+        setStatus("unauthenticated")
+        return
+      }
+
+      const fallbackMessage = "Unable to sign out right now."
+
+      if (axios.isAxiosError(error)) {
+        setErrorMessage(error.message || fallbackMessage)
+      } else {
+        setErrorMessage(fallbackMessage)
+      }
+
+      throw error
+    }
+  }, [])
+
   useEffect(() => {
     void refreshSession()
   }, [refreshSession])
@@ -86,8 +113,9 @@ export function AuthSessionProvider({
       errorMessage,
       isAuthenticated: status === "authenticated",
       refreshSession,
+      signOut,
     }),
-    [status, user, errorMessage, refreshSession]
+    [status, user, errorMessage, refreshSession, signOut]
   )
 
   return (

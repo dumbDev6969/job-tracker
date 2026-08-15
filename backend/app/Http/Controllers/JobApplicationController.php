@@ -15,7 +15,10 @@ class JobApplicationController extends Controller
      */
     public function index(Request $request)
     {
-        $jobApplications = $request->user()->jobApplications()->latest()->get();
+        $jobApplications = $request->user()->jobApplications()
+            ->select(['id', 'user_id', 'company', 'role', 'status', 'applied_date'])
+            ->latest()
+            ->paginate(10);
 
         return JobApplicationResource::collection($jobApplications);
     }
@@ -35,9 +38,11 @@ class JobApplicationController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(JobApplication $jobApplication)
+    public function show(Request $request, JobApplication $jobApplication)
     {
-        //
+        abort_if($jobApplication->user_id !== $request->user()->id, 403);
+
+        return new JobApplicationResource($jobApplication);
     }
 
     /**
@@ -45,7 +50,13 @@ class JobApplicationController extends Controller
      */
     public function update(UpdateJobApplicationRequest $request, JobApplication $jobApplication)
     {
-        //
+        abort_if($jobApplication->user_id !== $request->user()->id, 403);
+
+        $validated = $request->validated();
+
+        $jobApplication->update($validated);
+
+        return new JobApplicationResource($jobApplication);
     }
 
     /**

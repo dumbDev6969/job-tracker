@@ -4,6 +4,36 @@ import { API_BASE_URL, api } from "@/lib/api"
 
 import type { JobApplication } from "../types"
 
+type LaravelPaginatorLinks = {
+  first: string | null
+  last: string | null
+  prev: string | null
+  next: string | null
+}
+
+type LaravelPaginatorMetaLink = {
+  url: string | null
+  label: string
+  active: boolean
+}
+
+type LaravelPaginatorMeta = {
+  current_page: number
+  from: number | null
+  last_page: number
+  links: LaravelPaginatorMetaLink[]
+  path: string
+  per_page: number
+  to: number | null
+  total: number
+}
+
+export type JobApplicationListResponse = {
+  data: JobApplication[]
+  links: LaravelPaginatorLinks
+  meta: LaravelPaginatorMeta
+}
+
 export type JobApplicationPayload = {
   company: string
   role: string
@@ -29,13 +59,28 @@ export async function createJobApplication(payload: JobApplicationPayload) {
   return response.data
 }
 
-export async function listJobApplications(): Promise<JobApplication[]> {
-  await getCsrfCookie()
-  const response = await api.get<{ data: JobApplication[] }>("/api/job-applications")
+export async function listJobApplications(page = 1): Promise<JobApplicationListResponse> {
+  const response = await api.get<JobApplicationListResponse>("/api/job-applications", {
+    params: { page },
+  })
+  return response.data
+}
+
+export async function getJobApplication(id: number | string): Promise<JobApplication> {
+  const response = await api.get<{ data: JobApplication }>(`/api/job-applications/${id}`)
   return response.data.data
 }
 
-export async function deleteJobApplication(id: number): Promise<void> {
+export async function updateJobApplication(
+  id: number | string,
+  payload: Partial<JobApplicationPayload>
+): Promise<JobApplication> {
+  await getCsrfCookie()
+  const response = await api.put<{ data: JobApplication }>(`/api/job-applications/${id}`, payload)
+  return response.data.data
+}
+
+export async function deleteJobApplication(id: number | string): Promise<void> {
   await getCsrfCookie()
   await api.delete(`/api/job-applications/${id}`)
 }
