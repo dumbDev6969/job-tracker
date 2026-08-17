@@ -5,22 +5,28 @@ namespace App\Http\Controllers;
 use App\Models\JobApplication;
 use App\Http\Requests\StoreJobApplicationRequest;
 use App\Http\Requests\UpdateJobApplicationRequest;
-use App\Http\Resources\JobApplicationResource;
+use App\Http\Resources\JobApplication\JobApplicationResource;
+use App\Http\Resources\JobApplication\JobApplicationListResource;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use App\Policies\JobApplicationPolicy;
+use Illuminate\Database\Eloquent\Attributes\UsePolicy;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
+#[UsePolicy(JobApplicationPolicy::class)]
 class JobApplicationController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $jobApplications = $request->user()->jobApplications()
-            ->select(['id', 'user_id', 'company', 'role', 'status', 'applied_date'])
+            ->select(['id', 'user_id', 'company', 'role', 'status', 'applied_date', 'referral'])
             ->latest()
             ->paginate(10);
 
-        return JobApplicationResource::collection($jobApplications);
+        return JobApplicationListResource::collection($jobApplications);
     }
 
     /**
@@ -38,9 +44,9 @@ class JobApplicationController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Request $request, JobApplication $jobApplication)
+    public function show(JobApplication $jobApplication)
     {
-        abort_if($jobApplication->user_id !== $request->user()->id, 403);
+        $this->authorize('view', $jobApplication);
 
         return new JobApplicationResource($jobApplication);
     }
@@ -50,7 +56,7 @@ class JobApplicationController extends Controller
      */
     public function update(UpdateJobApplicationRequest $request, JobApplication $jobApplication)
     {
-        abort_if($jobApplication->user_id !== $request->user()->id, 403);
+        $this->authorize('update', $jobApplication);
 
         $validated = $request->validated();
 
@@ -64,10 +70,12 @@ class JobApplicationController extends Controller
      */
     public function destroy(Request $request, JobApplication $jobApplication)
     {
-        abort_if($jobApplication->user_id !== $request->user()->id, 403);
+        $this->authorize('delete', $jobApplication);
 
         $jobApplication->delete();
 
         return response()->noContent();
     }
 }
+
+

@@ -66,6 +66,18 @@ export async function listJobApplications(page = 1): Promise<JobApplicationListR
   return response.data
 }
 
+export async function listAllJobApplications(): Promise<JobApplication[]> {
+  const firstPageResponse = await listJobApplications(1)
+  const applications = [...firstPageResponse.data]
+
+  for (let page = 2; page <= firstPageResponse.meta.last_page; page += 1) {
+    const response = await listJobApplications(page)
+    applications.push(...response.data)
+  }
+
+  return applications
+}
+
 export async function getJobApplication(id: number | string): Promise<JobApplication> {
   const response = await api.get<{ data: JobApplication }>(`/api/job-applications/${id}`)
   return response.data.data

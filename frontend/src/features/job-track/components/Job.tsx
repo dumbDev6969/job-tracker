@@ -169,27 +169,27 @@ export function Job({ jobId: propJobId, onBack }: JobProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Top Header Controls */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={handleBack}
-          className="w-fit gap-2"
+          className="w-full gap-2 sm:w-fit"
         >
           <ArrowLeft className="size-4" />
           Back to list
         </Button>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => setShowEditModal(true)}
-            className="gap-1.5"
+            className="w-full gap-1.5 sm:w-auto"
           >
             <Pencil className="size-3.5" />
             Edit
@@ -200,7 +200,7 @@ export function Job({ jobId: propJobId, onBack }: JobProps) {
             variant="outline"
             size="sm"
             onClick={handleCopyId}
-            className="gap-1.5"
+            className="w-full gap-1.5 sm:w-auto"
           >
             {copied ? <Check className="size-3.5 text-emerald-500" /> : <Copy className="size-3.5" />}
             {copied ? "Copied ID" : "Copy ID"}
@@ -212,7 +212,7 @@ export function Job({ jobId: propJobId, onBack }: JobProps) {
               variant="outline"
               size="sm"
               onClick={() => window.open(job.url!, "_blank", "noopener,noreferrer")}
-              className="gap-1.5"
+              className="w-full gap-1.5 sm:w-auto"
             >
               <ExternalLink className="size-3.5" />
               Posting link
@@ -224,7 +224,7 @@ export function Job({ jobId: propJobId, onBack }: JobProps) {
             variant="destructive"
             size="sm"
             onClick={() => setShowDeleteDialog(true)}
-            className="gap-1.5"
+            className="col-span-2 w-full gap-1.5 sm:col-span-1 sm:w-auto"
           >
             <Trash2 className="size-3.5" />
             Delete
@@ -233,7 +233,7 @@ export function Job({ jobId: propJobId, onBack }: JobProps) {
       </div>
 
       {/* Primary Container Card */}
-      <div className="rounded-3xl border border-border bg-card p-6 shadow-sm sm:p-8">
+      <div className="rounded-3xl border border-border bg-card p-4 shadow-sm sm:p-6 lg:p-8">
         <div className="space-y-6">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2.5">
@@ -258,32 +258,30 @@ export function Job({ jobId: propJobId, onBack }: JobProps) {
 
           <Separator />
 
-          {/* Grid Layout: Main & Sidebar details */}
-          <div className="grid gap-6 md:grid-cols-3">
-            {/* Left / Main Column */}
-            <div className="space-y-6 md:col-span-2">
-              {/* Notes Container */}
-              <div className="space-y-2">
-                <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  <FileText className="size-4" />
-                  Notes & Details
-                </h2>
-                <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-foreground">
-                  {job.notes ? (
-                    <p className="whitespace-pre-wrap leading-relaxed">{job.notes}</p>
-                  ) : (
-                    <p className="italic text-muted-foreground">No notes added for this job application yet.</p>
-                  )}
-                </div>
+          <div className="space-y-6">
+            {/* Notes Container */}
+            <div className="space-y-2">
+              <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <FileText className="size-4" />
+                Notes & Details
+              </h2>
+              <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-foreground">
+                {job.notes ? (
+                  <p className="whitespace-pre-wrap leading-relaxed">{job.notes}</p>
+                ) : (
+                  <p className="italic text-muted-foreground">No notes added for this job application yet.</p>
+                )}
               </div>
+            </div>
 
+            <div className="grid gap-6 xl:grid-cols-2">
               {/* Timeline Info */}
-              <div className="space-y-3">
+              <div className="space-y-3 xl:col-span-2">
                 <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   <Clock className="size-4" />
                   Timeline & Dates
                 </h2>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                   <div className="rounded-2xl border border-border bg-card p-4">
                     <p className="text-xs text-muted-foreground">Applied Date</p>
                     <p className="mt-1 font-semibold text-foreground">{formatDate(job.applied_date)}</p>
@@ -298,10 +296,7 @@ export function Job({ jobId: propJobId, onBack }: JobProps) {
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* Right / Sidebar Column */}
-            <div className="space-y-6">
               <div className="space-y-4 rounded-2xl border border-border bg-muted/30 p-5">
                 <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Application Summary
@@ -318,10 +313,15 @@ export function Job({ jobId: propJobId, onBack }: JobProps) {
                   <div>
                     <span className="text-xs text-muted-foreground">Job Posting URL</span>
                     {job.url ? (
-                      <p className="mt-0.5 truncate text-primary hover:underline">
-                        <a href={job.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+                      <p className="mt-0.5 text-primary hover:underline">
+                        <a
+                          href={job.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-start gap-1 break-all"
+                        >
                           <ExternalLink className="size-3 shrink-0" />
-                          <span className="truncate">{job.url}</span>
+                          <span>{job.url}</span>
                         </a>
                       </p>
                     ) : (
@@ -332,8 +332,36 @@ export function Job({ jobId: propJobId, onBack }: JobProps) {
                   <Separator />
 
                   <div>
-                    <span className="text-xs text-muted-foreground">Created</span>
+                    <span className="text-xs text-muted-foreground">Referral</span>
+                    <p className="font-medium text-foreground">{job.referral ? "Yes" : "No"}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 rounded-2xl border border-border bg-card p-5">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Metadata
+                </h2>
+
+                <div className="grid gap-4 text-sm sm:grid-cols-2">
+                  <div>
+                    <span className="text-xs text-muted-foreground">Job ID</span>
+                    <p className="font-medium text-foreground">{job.id}</p>
+                  </div>
+
+                  <div>
+                    <span className="text-xs text-muted-foreground">User ID</span>
+                    <p className="font-medium text-foreground">{job.user_id}</p>
+                  </div>
+
+                  <div>
+                    <span className="text-xs text-muted-foreground">Created At</span>
                     <p className="font-medium text-foreground">{formatDate(job.created_at)}</p>
+                  </div>
+
+                  <div>
+                    <span className="text-xs text-muted-foreground">Updated At</span>
+                    <p className="font-medium text-foreground">{formatDate(job.updated_at)}</p>
                   </div>
                 </div>
               </div>
