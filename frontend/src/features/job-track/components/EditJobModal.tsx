@@ -222,7 +222,7 @@ export function EditJobModal({ job, open, onOpenChange, onSuccess }: EditJobModa
             <FormField id="interview_date" label="Interview Date">
               <Input
                 id="interview_date"
-                type="date"
+                type="datetime-local"
                 value={values.interview_date}
                 onChange={(e) => updateField("interview_date", e.target.value)}
               />

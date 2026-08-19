@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use App\Policies\JobApplicationPolicy;
 use Illuminate\Database\Eloquent\Attributes\UsePolicy;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use App\Http\Resources\CalendarEventResource;
 
 #[UsePolicy(JobApplicationPolicy::class)]
 class JobApplicationController extends Controller
@@ -76,6 +77,24 @@ class JobApplicationController extends Controller
 
         return response()->noContent();
     }
+
+    public function calendar(Request $request)
+    {
+        $request->validate([
+            'from' => ['required', 'date'],
+            'to' => ['required', 'date', 'after_or_equal:from'],
+        ]);
+
+        $from = $request->from . ' 00:00:00';
+        $to = $request->to . ' 23:59:59';
+
+        $applications = $request->user()->jobApplications()
+            ->where(function ($query) use ($from, $to) {
+                $query->whereBetween('interview_date', [$from, $to])
+                    ->orWhereBetween('follow_up_date', [$from, $to]);
+            })
+            ->get(['id', 'company', 'role', 'interview_date', 'follow_up_date']);
+
+        return CalendarEventResource::collection($applications);
+    }
 }
-
-

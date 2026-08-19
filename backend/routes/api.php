@@ -9,5 +9,6 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('job-applications/calendar', [JobApplicationController::class, 'calendar']);
     Route::apiResource('job-applications', JobApplicationController::class);
 });
