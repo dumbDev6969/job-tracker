@@ -1,10 +1,5 @@
-import { PagePlaceholder } from "./PagePlaceholder"
+import { SettingsPage as SettingsFeature } from "@/features/settings"
 
 export function SettingsPage() {
-  return (
-    <PagePlaceholder
-      title="Settings"
-      description="App preferences and account settings will live here."
-    />
-  )
+  return <SettingsFeature />
 }

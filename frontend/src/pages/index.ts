@@ -1,7 +1,6 @@
 export { OverviewPage } from "./OverviewPage"
 export { JobsPage } from "./JobsPage"
 export { CalendarPage } from "./CalendarPage"
-export { MessagesPage } from "./MessagesPage"
 export { ProfilePage } from "./ProfilePage"
 export { SettingsPage } from "./SettingsPage"
 export { JobDetailPage } from "./JobDetailPage"

@@ -92,7 +92,7 @@ export function JobForm({ onSubmit, className, submitLabel = "Save job" }: JobFo
       contact: values.contact.trim() || null,
       referral: values.referral,
       notes: values.notes.trim() || null,
-      applied_date: new Date().toISOString().slice(0, 10),
+      applied_date: values.status === "saved" ? null : new Date().toISOString().slice(0, 10),
     }
 
     try {

@@ -39,7 +39,7 @@ export function JobsPage() {
           </Button>
         )
       }
-      className="max-w-6xl"
+      className="w-full max-w-none"
     >
       {view === "form" ? (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.8fr)]">

@@ -114,6 +114,7 @@ const COLUMN_LABELS: Record<string, string> = {
   company: "Company",
   role: "Role",
   applied_date: "Applied",
+  created_at: "Date Saved",
 }
 
 type JobsPagination = {
@@ -143,9 +144,9 @@ export function clearJobsCache() {
   jobsCacheByPage.clear()
 }
 
-function formatDate(value: string | null) {
+function formatDate(value: string | null | undefined) {
   if (!value) {
-    return "�"
+    return "-"
   }
 
   const date = new Date(value)
@@ -426,10 +427,14 @@ export function Jobs() {
           cell: ({ getValue }) => <span className="font-medium text-foreground">{getValue()}</span>,
         }),
         columnHelper.accessor("role", {
-          header: "Role",
+          header: ({ column }) => <SortableHeader label="Role" column={column} />,
         }),
         columnHelper.accessor("applied_date", {
           header: ({ column }) => <SortableHeader label="Applied" column={column} />,
+          cell: ({ getValue }) => formatDate(getValue()),
+        }),
+        columnHelper.accessor("created_at", {
+          header: ({ column }) => <SortableHeader label="Date Saved" column={column} />,
           cell: ({ getValue }) => formatDate(getValue()),
         }),
         columnHelper.display({
@@ -596,8 +601,8 @@ export function Jobs() {
         </DropdownMenu>
       </div>
 
-      <div className={cn("overflow-hidden rounded-xl border border-border transition-opacity duration-200", isFetchingPage && "opacity-60")}>
-        <Table>
+      <div className={cn("w-full rounded-xl border border-border transition-opacity duration-200", isFetchingPage && "opacity-60")}>
+        <Table className="w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
