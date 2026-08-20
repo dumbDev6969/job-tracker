@@ -23,7 +23,7 @@ class JobApplicationController extends Controller
     public function index(Request $request)
     {
         $jobApplications = $request->user()->jobApplications()
-            ->select(['id', 'user_id', 'company', 'role', 'status', 'applied_date', 'referral'])
+            ->select(['id', 'user_id', 'company', 'role', 'status', 'applied_date', 'referral', 'created_at'])
             ->latest()
             ->paginate(10);
 

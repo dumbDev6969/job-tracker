@@ -21,6 +21,7 @@ class JobApplicationListResource extends JsonResource
             'role' => $this->role,
             'status' => $this->status,
             'applied_date' => $this->applied_date,
+            'created_at' => $this->created_at,
             'referral' => $this->referral,
         ];
     }
