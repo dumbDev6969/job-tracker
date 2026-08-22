@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Loader2, Sparkles } from "lucide-react"
 
 import { FormField } from "@/components/FormField"
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { createJobApplication } from "@/features/job-track/services/jobService"
+import { createJobApplication, scrapeJobUrl } from "@/features/job-track/services/jobService"
 import { cn } from "@/lib/utils"
 
 const APPLICATION_STATUS = ["saved", "applied", "interviewing", "offered", "rejected"] as const
@@ -50,10 +50,105 @@ export function JobForm({ onSubmit, className, submitLabel = "Save job" }: JobFo
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null)
+  const [isScraping, setIsScraping] = useState(false)
+  const [scrapeHint, setScrapeHint] = useState<string | null>(null)
+
+  const scrapeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastScrapedUrlRef = useRef<string>("")
+
+  useEffect(() => {
+    return () => {
+      if (scrapeTimeoutRef.current) {
+        clearTimeout(scrapeTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const updateField = <K extends keyof JobFormValues>(field: K, value: JobFormValues[K]) => {
     setValues((previous) => ({ ...previous, [field]: value }))
     setErrors((previous) => ({ ...previous, [field]: undefined }))
+  }
+
+  const handleUrlChange = (newUrl: string) => {
+    updateField("url", newUrl)
+    setScrapeHint(null)
+
+    if (scrapeTimeoutRef.current) {
+      clearTimeout(scrapeTimeoutRef.current)
+    }
+
+    const trimmedUrl = newUrl.trim()
+    if (!/^https?:\/\//i.test(trimmedUrl)) {
+      setIsScraping(false)
+      return
+    }
+
+    if (trimmedUrl === lastScrapedUrlRef.current) {
+      return
+    }
+
+    if (values.company.trim() && values.role.trim()) {
+      return
+    }
+
+    scrapeTimeoutRef.current = setTimeout(async () => {
+      lastScrapedUrlRef.current = trimmedUrl
+      setIsScraping(true)
+      setScrapeHint(null)
+
+      try {
+        const result = await scrapeJobUrl(trimmedUrl)
+        let filledCompany = false
+        let filledRole = false
+        const missingFields: string[] = []
+
+        setValues((prev) => {
+          const next = { ...prev }
+          if (!prev.company.trim()) {
+            if (result.company) {
+              next.company = result.company
+              filledCompany = true
+            } else {
+              missingFields.push("Company name")
+            }
+          }
+          if (!prev.role.trim()) {
+            if (result.role) {
+              next.role = result.role
+              filledRole = true
+            } else {
+              missingFields.push("Job role")
+            }
+          }
+          return next
+        })
+
+        if (filledCompany || filledRole) {
+          setErrors((prev) => ({
+            ...prev,
+            ...(filledCompany ? { company: undefined } : {}),
+            ...(filledRole ? { role: undefined } : {}),
+          }))
+        }
+
+        if (missingFields.length === 1) {
+          setScrapeHint(`Couldn't auto-fill ${missingFields[0]}, please enter manually.`)
+        } else if (missingFields.length >= 2) {
+          setScrapeHint("Couldn't auto-fill Company name and Job role, please enter manually.")
+        }
+      } catch {
+        const missing: string[] = []
+        if (!values.company.trim()) missing.push("Company name")
+        if (!values.role.trim()) missing.push("Job role")
+        if (missing.length === 1) {
+          setScrapeHint(`Couldn't auto-fill ${missing[0]}, please enter manually.`)
+        } else {
+          setScrapeHint("Couldn't auto-fill Company name and Job role, please enter manually.")
+        }
+      } finally {
+        setIsScraping(false)
+      }
+    }, 600)
   }
 
   const validate = () => {
@@ -75,7 +170,15 @@ export function JobForm({ onSubmit, className, submitLabel = "Save job" }: JobFo
     return Object.keys(nextErrors).length === 0
   }
 
-  const resetForm = () => setValues(defaultValues)
+  const resetForm = () => {
+    if (scrapeTimeoutRef.current) {
+      clearTimeout(scrapeTimeoutRef.current)
+    }
+    lastScrapedUrlRef.current = ""
+    setIsScraping(false)
+    setScrapeHint(null)
+    setValues(defaultValues)
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -199,13 +302,32 @@ export function JobForm({ onSubmit, className, submitLabel = "Save job" }: JobFo
           description="Link to the posting"
           error={errors.url}
         >
-          <Input
-            id="url"
-            type="url"
-            placeholder="https://company.com/careers/role"
-            value={values.url}
-            onChange={(event) => updateField("url", event.target.value)}
-          />
+          <div className="relative">
+            <Input
+              id="url"
+              type="url"
+              placeholder="https://company.com/careers/role"
+              value={values.url}
+              onChange={(event) => handleUrlChange(event.target.value)}
+              className={cn(isScraping && "pr-9")}
+            />
+            {isScraping && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                <Loader2 className="size-4 animate-spin text-muted-foreground" />
+              </div>
+            )}
+          </div>
+          {isScraping && (
+            <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Sparkles className="size-3 animate-pulse text-primary" />
+              Auto-detecting company and role...
+            </p>
+          )}
+          {scrapeHint && !isScraping && (
+            <p className="mt-1.5 text-xs text-muted-foreground">
+              {scrapeHint}
+            </p>
+          )}
         </FormField>
 
         <FormField

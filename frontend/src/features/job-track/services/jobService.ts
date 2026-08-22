@@ -4,6 +4,9 @@ import { API_BASE_URL, api } from "@/lib/api"
 
 import type { JobApplication } from "../types"
 
+export const JOB_APPLICATIONS_KEY = ["job-applications"] as const
+export const ALL_JOB_APPLICATIONS_KEY = ["job-applications", "all"] as const
+
 type LaravelPaginatorLinks = {
   first: string | null
   last: string | null
@@ -95,4 +98,15 @@ export async function updateJobApplication(
 export async function deleteJobApplication(id: number | string): Promise<void> {
   await getCsrfCookie()
   await api.delete(`/api/job-applications/${id}`)
+}
+
+export type ScrapeResult = {
+  company: string | null
+  role: string | null
+}
+
+export async function scrapeJobUrl(url: string): Promise<ScrapeResult> {
+  await getCsrfCookie()
+  const response = await api.post<ScrapeResult>("/api/scrape-job-url", { url })
+  return response.data
 }
