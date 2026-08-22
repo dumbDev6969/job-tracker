@@ -1,10 +1,10 @@
 import type { LucideIcon } from "lucide-react"
 import {
-  BriefcaseBusiness,
+  BookOpen,
   CalendarRange,
-  CircleUserRound,
   LayoutGrid,
-  Settings,
+  Settings2,
+  SquareTerminal,
 } from "lucide-react"
 
 export type NavItem = {
@@ -15,9 +15,29 @@ export type NavItem = {
 }
 
 export const navItems: NavItem[] = [
-  { label: "Overview", href: "/overview", icon: LayoutGrid },
-  { label: "Jobs", href: "/jobs", icon: BriefcaseBusiness },
-  { label: "Calendar", href: "/calendar", icon: CalendarRange },
-  { label: "Profile", href: "/profile", icon: CircleUserRound },
-  { label: "Settings", href: "/settings", icon: Settings },
+  {
+    label: "Overview",
+    href: "/overview",
+    icon: LayoutGrid,
+  },
+  {
+    label: "Jobs",
+    href: "/jobs",
+    icon: SquareTerminal,
+  },
+  {
+    label: "Calendar",
+    href: "/calendar",
+    icon: CalendarRange,
+  },
+  {
+    label: "Profile",
+    href: "/profile",
+    icon: BookOpen,
+  },
+  {
+    label: "Settings",
+    href: "/settings",
+    icon: Settings2,
+  },
 ]

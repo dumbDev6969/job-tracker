@@ -1,160 +1,231 @@
 import { useState } from "react"
-import { ArrowUpRight, LogOut } from "lucide-react"
-import { NavLink, useNavigate } from "react-router-dom"
+import {
+  ChevronsUpDown,
+  GalleryVerticalEnd,
+  LogOut,
+  Settings2,
+  User,
+} from "lucide-react"
+import { NavLink, useLocation, useNavigate } from "react-router-dom"
 
-import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuGroupLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useAuthSession } from "@/features/auth"
 import { cn } from "@/lib/utils"
 
-import { navItems } from "./nav-config"
+import { navItems, type NavItem } from "./nav-config"
 
 type SidebarProps = {
+  isCollapsed?: boolean
   className?: string
 }
 
 function getUserInitials(name: string | null | undefined) {
-  if (!name) {
-    return "?"
-  }
-
-  const parts = name
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-
-  if (parts.length === 0) {
-    return "?"
-  }
-
+  if (!name) return "U"
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length === 0) return "U"
   return parts
     .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
+    .map((p) => p[0]?.toUpperCase() ?? "")
     .join("")
 }
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({ isCollapsed = false, className }: SidebarProps) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { signOut, user } = useAuthSession()
 
   const [isSigningOut, setIsSigningOut] = useState(false)
-  const [logoutError, setLogoutError] = useState<string | null>(null)
 
   const handleLogout = async () => {
-    setLogoutError(null)
     setIsSigningOut(true)
-
     try {
       await signOut()
       navigate("/login", { replace: true })
-    } catch {
-      setLogoutError("Unable to log out right now. Please try again.")
     } finally {
       setIsSigningOut(false)
     }
   }
 
-  const userName = user?.name ?? "Unknown user"
-  const userEmail = user?.email ?? "No email available"
+  const userName = user?.name ?? "shadcn"
+  const userEmail = user?.email ?? "m@example.com"
   const userInitials = getUserInitials(user?.name)
 
   return (
     <aside
       className={cn(
-        "hidden w-72 shrink-0 flex-col border-r border-border bg-sidebar/80 px-4 py-5 backdrop-blur md:flex",
+        "sticky top-0 h-screen hidden shrink-0 flex-col justify-between border-r border-border/70 bg-card/60 px-3 py-4 backdrop-blur-md transition-all duration-200 ease-in-out md:flex",
+        isCollapsed ? "w-[68px] items-center" : "w-64",
         className
       )}
     >
-      <div className="mb-6 flex items-center gap-3 px-2">
-        <div className="flex size-9 items-center justify-center rounded-xl bg-primary text-sm font-semibold text-primary-foreground">
-          JT
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">Workspace</p>
-          <h2 className="text-lg font-semibold text-foreground">JobTracker</h2>
+      {/* Top Section: Workspace / Brand Header */}
+      <div className="w-full space-y-4 overflow-y-auto overflow-x-hidden">
+        {isCollapsed ? (
+          <div className="flex size-10 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-xs dark:bg-zinc-900 mx-auto">
+            <GalleryVerticalEnd className="size-5" />
+          </div>
+        ) : (
+          <div className="flex w-full items-center gap-3 rounded-2xl bg-muted/40 p-2 text-left border border-border/30">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-xs dark:bg-zinc-900">
+              <GalleryVerticalEnd className="size-4.5" />
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate text-sm font-semibold text-foreground">Acme Inc</span>
+              <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation Group */}
+        <div className="space-y-1">
+          {!isCollapsed && (
+            <p className="px-2 pt-2 pb-1 text-xs font-medium text-muted-foreground">
+              Platform
+            </p>
+          )}
+
+          <nav className="space-y-1" aria-label="Sidebar navigation">
+            {navItems.map((item: NavItem) => {
+              const Icon = item.icon
+              const isActive = location.pathname === item.href
+
+              if (isCollapsed) {
+                return (
+                  <NavLink
+                    key={item.label}
+                    to={item.href}
+                    title={item.label}
+                    className={cn(
+                      "flex size-10 items-center justify-center rounded-xl transition-colors mx-auto",
+                      isActive
+                        ? "bg-muted text-foreground font-semibold"
+                        : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="size-5" />
+                  </NavLink>
+                )
+              }
+
+              return (
+                <NavLink
+                  key={item.label}
+                  to={item.href}
+                  className={cn(
+                    "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                    isActive
+                      ? "bg-muted/60 text-foreground font-semibold"
+                      : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
+                  )}
+                >
+                  <Icon className="size-4 shrink-0" />
+                  <span>{item.label}</span>
+                </NavLink>
+              )
+            })}
+          </nav>
         </div>
       </div>
 
-      <nav className="space-y-1.5" aria-label="Sidebar navigation">
-        {navItems.map(({ label, href, icon: Icon, badge }) => (
-          <NavLink
-            key={label}
-            to={href}
-            className={({ isActive }) =>
-              cn(
-                "group flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <span className="flex items-center gap-3">
-                  <span
-                    className={cn(
-                      "flex size-8 items-center justify-center rounded-lg",
-                      isActive
-                        ? "bg-primary-foreground/10 text-primary-foreground"
-                        : "bg-muted text-muted-foreground group-hover:text-foreground"
-                    )}
-                  >
-                    <Icon className="size-4" />
-                  </span>
-                  {label}
-                </span>
-
-                {badge ? (
-                  <span
-                    className={cn(
-                      "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                      isActive ? "bg-primary-foreground/15 text-primary-foreground" : "bg-muted text-foreground"
-                    )}
-                  >
-                    {badge}
-                  </span>
-                ) : null}
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
-
-      <div className="mt-auto space-y-3 rounded-2xl border border-border bg-background/60 p-3">
-        <div className="flex items-center justify-between rounded-xl bg-muted/80 p-2.5">
-          <div className="flex items-center gap-3">
-            <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
-              {userInitials}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{userName}</p>
-              <p className="text-xs text-muted-foreground">{userEmail}</p>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Open profile"
-            onClick={() => navigate("/profile")}
-          >
-            <ArrowUpRight className="size-4" />
-          </Button>
-        </div>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full justify-between gap-2"
-          onClick={handleLogout}
-          disabled={isSigningOut}
-        >
-          <span className="flex items-center gap-2">
-            <LogOut className="size-4" />
-            {isSigningOut ? "Logging out..." : "Log out"}
-          </span>
-        </Button>
-        {logoutError ? <p className="text-sm text-destructive">{logoutError}</p> : null}
+      {/* Bottom Section: User Profile Pill */}
+      <div className="w-full pt-4 shrink-0">
+        {isCollapsed ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  title={`${userName} (${userEmail})`}
+                  className="flex size-10 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 text-white font-semibold text-xs shadow-xs ring-1 ring-border/80 hover:ring-primary/40 transition-all cursor-pointer mx-auto"
+                >
+                  {userInitials}
+                </button>
+              }
+            />
+            <DropdownMenuContent side="right" align="end" className="w-56">
+              <DropdownMenuGroup>
+                <DropdownMenuGroupLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{userName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                  </div>
+                </DropdownMenuGroupLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/profile")} className="gap-2 cursor-pointer">
+                  <User className="size-4 text-muted-foreground" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings")} className="gap-2 cursor-pointer">
+                  <Settings2 className="size-4 text-muted-foreground" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="gap-2 text-destructive focus:text-destructive cursor-pointer"
+                >
+                  <LogOut className="size-4" />
+                  {isSigningOut ? "Logging out..." : "Log out"}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-2xl p-2 text-left transition-colors hover:bg-muted/60 cursor-pointer border border-transparent hover:border-border/40"
+                >
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 text-white font-semibold text-xs shadow-xs">
+                    {userInitials}
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-semibold text-foreground">{userName}</span>
+                    <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
+                  </div>
+                  <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />
+                </button>
+              }
+            />
+            <DropdownMenuContent side="top" align="start" className="w-60">
+              <DropdownMenuGroup>
+                <DropdownMenuGroupLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-semibold text-foreground">{userName}</p>
+                    <p className="text-xs text-muted-foreground truncate">{userEmail}</p>
+                  </div>
+                </DropdownMenuGroupLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate("/profile")} className="gap-2 cursor-pointer">
+                  <User className="size-4 text-muted-foreground" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/settings")} className="gap-2 cursor-pointer">
+                  <Settings2 className="size-4 text-muted-foreground" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="gap-2 text-destructive focus:text-destructive cursor-pointer"
+                >
+                  <LogOut className="size-4" />
+                  {isSigningOut ? "Logging out..." : "Log out"}
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </aside>
   )
