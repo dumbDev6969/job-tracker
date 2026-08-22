@@ -8,8 +8,9 @@ export {
   getJobApplication,
   updateJobApplication,
   deleteJobApplication,
+  scrapeJobUrl,
 } from "./services/jobService"
-export type { JobApplicationPayload } from "./services/jobService"
+export type { JobApplicationPayload, ScrapeResult } from "./services/jobService"
 export type {
   JobApplication,
   JobApplicationStatus,

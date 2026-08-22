@@ -1,10 +1,12 @@
-"use client"
-
 import * as React from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Briefcase, CircleCheckBig, Clock3, Handshake, OctagonX } from "lucide-react"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { listAllJobApplications } from "@/features/job-track/services/jobService"
+import {
+  ALL_JOB_APPLICATIONS_KEY,
+  listAllJobApplications,
+} from "@/features/job-track/services/jobService"
 import type { JobApplication, JobApplicationStatus } from "@/features/job-track/types"
 
 const APPLICATION_STATUS = ["saved", "applied", "interviewing", "offered", "rejected"] as const
@@ -68,42 +70,18 @@ function buildStatusCounts(applications: JobApplication[]) {
 }
 
 export function KPIs() {
-  const [applications, setApplications] = React.useState<JobApplication[]>([])
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
-
-  React.useEffect(() => {
-    let isMounted = true
-
-    async function loadApplications() {
-      setIsLoading(true)
-      setErrorMessage(null)
-
-      const result = await listAllJobApplications()
-      if (!isMounted) {
-        return
-      }
-
-      setApplications(result)
-      setIsLoading(false)
-    }
-
-    loadApplications().catch(() => {
-      if (!isMounted) {
-        return
-      }
-
-      setErrorMessage("Unable to load status KPIs right now.")
-      setIsLoading(false)
-    })
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  const {
+    data: applications = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ALL_JOB_APPLICATIONS_KEY,
+    queryFn: listAllJobApplications,
+  })
 
   const statusCounts = React.useMemo(() => buildStatusCounts(applications), [applications])
   const totalApplications = applications.length
+  const errorMessage = isError ? "Unable to load status KPIs right now." : null
 
   return (
     <section className="space-y-3 sm:space-y-4">

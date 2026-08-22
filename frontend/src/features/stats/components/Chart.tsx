@@ -1,6 +1,7 @@
 
 
 import * as React from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,7 +11,10 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { listAllJobApplications } from "@/features/job-track/services/jobService"
+import {
+  ALL_JOB_APPLICATIONS_KEY,
+  listAllJobApplications,
+} from "@/features/job-track/services/jobService"
 import type { JobApplication } from "@/features/job-track/types"
 
 type SeriesKey = "referred" | "cold"
@@ -78,45 +82,21 @@ function aggregateApplicationsToChartPoints(applications: JobApplication[]) {
 }
 
 export function ChartBarInteractive() {
-  const [chartData, setChartData] = React.useState<ChartPoint[]>([])
-  const [totals, setTotals] = React.useState<Record<SeriesKey, number>>(emptyCounts())
-  const [totalAppliedCount, setTotalAppliedCount] = React.useState(0)
-  const [isLoading, setIsLoading] = React.useState(true)
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
+  const {
+    data: applications = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ALL_JOB_APPLICATIONS_KEY,
+    queryFn: listAllJobApplications,
+  })
 
-  React.useEffect(() => {
-    let isMounted = true
+  const { chartPoints: chartData, totalAppliedCount, totals } = React.useMemo(
+    () => aggregateApplicationsToChartPoints(applications),
+    [applications]
+  )
 
-    async function loadChartData() {
-      setIsLoading(true)
-      setErrorMessage(null)
-
-      const applications = await listAllJobApplications()
-      const aggregated = aggregateApplicationsToChartPoints(applications)
-
-      if (!isMounted) {
-        return
-      }
-
-      setChartData(aggregated.chartPoints)
-      setTotals(aggregated.totals)
-      setTotalAppliedCount(aggregated.totalAppliedCount)
-      setIsLoading(false)
-    }
-
-    loadChartData().catch(() => {
-      if (!isMounted) {
-        return
-      }
-
-      setErrorMessage("Unable to load chart data right now.")
-      setIsLoading(false)
-    })
-
-    return () => {
-      isMounted = false
-    }
-  }, [])
+  const errorMessage = isError ? "Unable to load chart data right now." : null
 
   return (
     <Card className="py-0">

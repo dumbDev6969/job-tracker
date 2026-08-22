@@ -1,11 +1,17 @@
 import { useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { PlusCircle, Table as TableIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { JobForm, Jobs } from "@/features/job-track"
+import {
+  ALL_JOB_APPLICATIONS_KEY,
+  JOB_APPLICATIONS_KEY,
+} from "@/features/job-track/services/jobService"
 import { PagePlaceholder } from "./PagePlaceholder"
 
 export function JobsPage() {
+  const queryClient = useQueryClient()
   const [view, setView] = useState<"table" | "form">("table")
 
   return (
@@ -43,7 +49,13 @@ export function JobsPage() {
     >
       {view === "form" ? (
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(280px,0.8fr)]">
-          <JobForm onSubmit={() => setView("table")} />
+          <JobForm
+            onSubmit={() => {
+              void queryClient.invalidateQueries({ queryKey: JOB_APPLICATIONS_KEY })
+              void queryClient.invalidateQueries({ queryKey: ALL_JOB_APPLICATIONS_KEY })
+              setView("table")
+            }}
+          />
 
           <aside className="space-y-4">
             <div className="rounded-2xl border border-border bg-muted/30 p-4">

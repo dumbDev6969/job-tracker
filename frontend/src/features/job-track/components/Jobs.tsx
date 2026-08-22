@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react"
+import { useMemo, useState, type ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
   columnFacetingFeature,
@@ -72,7 +73,11 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 
-import { deleteJobApplication, listJobApplications } from "../services/jobService"
+import {
+  JOB_APPLICATIONS_KEY,
+  deleteJobApplication,
+  listJobApplications,
+} from "../services/jobService"
 import { JOB_STATUSES, type JobApplication, type JobApplicationStatus } from "../types"
 
 const features = tableFeatures({
@@ -115,33 +120,6 @@ const COLUMN_LABELS: Record<string, string> = {
   role: "Role",
   applied_date: "Applied",
   created_at: "Date Saved",
-}
-
-type JobsPagination = {
-  currentPage: number
-  lastPage: number
-  total: number
-  hasPreviousPage: boolean
-  hasNextPage: boolean
-}
-
-type JobsCache = {
-  jobs: JobApplication[]
-  pagination: JobsPagination
-}
-
-const DEFAULT_PAGINATION: JobsPagination = {
-  currentPage: 1,
-  lastPage: 1,
-  total: 0,
-  hasPreviousPage: false,
-  hasNextPage: false,
-}
-
-let jobsCacheByPage = new Map<number, JobsCache>()
-
-export function clearJobsCache() {
-  jobsCacheByPage.clear()
 }
 
 function formatDate(value: string | null | undefined) {
@@ -324,66 +302,32 @@ function StatusFacetedFilter({
 
 export function Jobs() {
   const navigate = useNavigate()
-  const initialCache = jobsCacheByPage.get(1)
-  const [jobs, setJobs] = useState<JobApplication[]>(() => initialCache?.jobs ?? [])
-  const [pagination, setPagination] = useState<JobsPagination>(
-    () => initialCache?.pagination ?? DEFAULT_PAGINATION
-  )
-  const [isLoading, setIsLoading] = useState(() => jobsCacheByPage.size === 0)
-  const [isFetchingPage, setIsFetchingPage] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+  const [page, setPage] = useState(1)
   const [editingTarget, setEditingTarget] = useState<JobApplication | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<JobApplication | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  const loadJobs = useCallback(
-    async (page = 1, showLoading = false) => {
-      const cached = jobsCacheByPage.get(page)
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: [...JOB_APPLICATIONS_KEY, { page }],
+    queryFn: () => listJobApplications(page),
+  })
 
-      if (cached) {
-        setJobs(cached.jobs)
-        setPagination(cached.pagination)
-        setIsLoading(false)
-      } else if (showLoading || jobsCacheByPage.size === 0) {
-        setIsLoading(true)
-      }
-
-      setIsFetchingPage(true)
-      setError(null)
-      try {
-        const response = await listJobApplications(page)
-        const nextPagination: JobsPagination = {
-          currentPage: response.meta.current_page,
-          lastPage: response.meta.last_page,
-          total: response.meta.total,
-          hasPreviousPage: response.links.prev !== null,
-          hasNextPage: response.links.next !== null,
-        }
-
-        const newCache: JobsCache = {
-          jobs: response.data,
-          pagination: nextPagination,
-        }
-        jobsCacheByPage.set(page, newCache)
-
-        setJobs(response.data)
-        setPagination(nextPagination)
-      } catch {
-        if (!cached) {
-          setError("Failed to load job applications.")
-        }
-      } finally {
-        setIsLoading(false)
-        setIsFetchingPage(false)
-      }
-    },
-    []
-  )
-
-  useEffect(() => {
-    const hasInitialData = jobsCacheByPage.has(1)
-    void loadJobs(1, !hasInitialData)
-  }, [loadJobs])
+  const jobs = data?.data ?? []
+  const pagination = {
+    currentPage: data?.meta.current_page ?? 1,
+    lastPage: data?.meta.last_page ?? 1,
+    total: data?.meta.total ?? 0,
+    hasPreviousPage: Boolean(data?.links.prev),
+    hasNextPage: Boolean(data?.links.next),
+  }
 
   const columns = useMemo(
     () =>
@@ -473,23 +417,24 @@ export function Jobs() {
     }
 
     setIsDeleting(true)
+    setDeleteError(null)
     try {
       await deleteJobApplication(deleteTarget.id)
-      const targetPage =
-        pagination.currentPage > 1 && jobs.length === 1
-          ? pagination.currentPage - 1
-          : pagination.currentPage
-      jobsCacheByPage.clear()
+      if (page > 1 && jobs.length === 1) {
+        setPage((prev) => prev - 1)
+      }
       setDeleteTarget(null)
-      await loadJobs(targetPage, false)
+      await queryClient.invalidateQueries({ queryKey: JOB_APPLICATIONS_KEY })
     } catch {
-      setError("Failed to delete the job application. Please try again.")
+      setDeleteError("Failed to delete the job application. Please try again.")
     } finally {
       setIsDeleting(false)
     }
   }
 
-  if (!isLoading && !error && jobs.length === 0) {
+  const errorMessage = isError ? "Failed to load job applications." : deleteError
+
+  if (!isLoading && !errorMessage && jobs.length === 0) {
     return (
       <EmptyState
         title="No job applications yet"
@@ -549,15 +494,15 @@ export function Jobs() {
 
   return (
     <div className="space-y-4">
-      {error ? (
+      {errorMessage ? (
         <div className="flex items-center justify-between rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <span>{error}</span>
+          <span>{errorMessage}</span>
           <Button
             type="button"
             variant="outline"
             size="sm"
             className="gap-1.5"
-            onClick={() => void loadJobs(pagination.currentPage, true)}
+            onClick={() => void refetch()}
           >
             <RefreshCw className="size-3.5" />
             Retry
@@ -601,7 +546,7 @@ export function Jobs() {
         </DropdownMenu>
       </div>
 
-      <div className={cn("w-full rounded-xl border border-border transition-opacity duration-200", isFetchingPage && "opacity-60")}>
+      <div className={cn("w-full rounded-xl border border-border transition-opacity duration-200", isFetching && !isLoading && "opacity-60")}>
         <Table className="w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -630,8 +575,8 @@ export function Jobs() {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => void loadJobs(pagination.currentPage - 1, false)}
-            disabled={!pagination.hasPreviousPage || isFetchingPage}
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={!pagination.hasPreviousPage || isFetching}
           >
             Previous
           </Button>
@@ -639,10 +584,10 @@ export function Jobs() {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => void loadJobs(pagination.currentPage + 1, false)}
-            disabled={!pagination.hasNextPage || isFetchingPage}
+            onClick={() => setPage((p) => p + 1)}
+            disabled={!pagination.hasNextPage || isFetching}
           >
-            {isFetchingPage ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
+            {isFetching && !isLoading ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
             Next
           </Button>
         </div>
@@ -670,10 +615,9 @@ export function Jobs() {
           if (!open) setEditingTarget(null)
         }}
         onSuccess={() => {
-          jobsCacheByPage.clear()
-          void loadJobs(pagination.currentPage, false)
+          void queryClient.invalidateQueries({ queryKey: JOB_APPLICATIONS_KEY })
         }}
       />
     </div>
   )
-}
+}
