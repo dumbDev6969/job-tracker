@@ -70,15 +70,15 @@ export function Sidebar({ isCollapsed = false, className }: SidebarProps) {
       <div className="w-full space-y-4 overflow-y-auto overflow-x-hidden">
         {isCollapsed ? (
           <div className="flex size-10 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-xs dark:bg-zinc-900 mx-auto">
-            <GalleryVerticalEnd className="size-5" />
+            JT
           </div>
         ) : (
           <div className="flex w-full items-center gap-3 rounded-2xl bg-muted/40 p-2 text-left border border-border/30">
             <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-950 text-white shadow-xs dark:bg-zinc-900">
-              <GalleryVerticalEnd className="size-4.5" />
+              JT
             </div>
             <div className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate text-sm font-semibold text-foreground">Acme Inc</span>
+              <span className="truncate text-sm font-semibold text-foreground">Job Track</span>
               <span className="truncate text-xs text-muted-foreground">{userEmail}</span>
             </div>
           </div>

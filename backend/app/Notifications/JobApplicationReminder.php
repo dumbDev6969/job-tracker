@@ -43,7 +43,7 @@ class JobApplicationReminder extends Notification
             ->greeting("Hello {$notifiable->name},")
             ->line("This is a reminder that you have an interview scheduled for tomorrow ({$dateStr}) for the {$this->jobApplication->role} position at {$this->jobApplication->company}.")
             ->line("Good luck with your preparation!")
-            ->action('View Job Application', config('app.url', 'http://localhost:5173') . "/jobs/{$this->jobApplication->id}");
+            ->action('View Job Application', config('app.frontend_url') . "/jobs/{$this->jobApplication->id}");
     }
 
     /**

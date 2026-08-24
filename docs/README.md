@@ -12,7 +12,7 @@ A modern, full-stack personal job application tracker and career management CRM.
 ```
 job-tracker/
 ├── frontend/     # React 19 + TypeScript + Vite + Tailwind CSS v4
-├── backend/      # Laravel 13 API + Laravel Sanctum (SPA Authentication)
+├── backend/      # Laravel 13 API + Laravel Sanctum (SPA Authentication) + Resend Mail
 └── docs/         # Documentation & Guides
 ```
 
@@ -29,7 +29,9 @@ job-tracker/
 ### Backend
 - **Framework**: Laravel 13 (PHP 8.3+)
 - **Authentication**: Laravel Sanctum (Cookie-based SPA Session Auth with CSRF protection)
-- **Database**: SQLite (default / zero-config) or PostgreSQL / MySQL
+- **Database**: PostgreSQL (Supabase) or SQLite (zero-config local)
+- **Email & Notifications**: Resend (`resend/resend-laravel`) for transactional email delivery
+- **Task Scheduling**: Laravel Scheduler for automated daily interview reminders
 - **Scraping & Metadata Extraction**: Native PHP `DOMDocument`, `DOMXPath`, and JSON-LD schema parsing
 
 ---
@@ -40,6 +42,9 @@ job-tracker/
 - **Smart URL Scraping & Auto-Fill**:
   - Paste any job posting URL (LinkedIn, Lever, Greenhouse, Workable, Ashby, etc.) to automatically extract and populate **Company Name** and **Role Title**.
   - Includes dedicated LinkedIn title parser (`"{Company} hiring {Role} in {Location}"`) with graceful fallback to manual entry if unparseable.
+- **Automated Interview Reminders (Resend)**:
+  - Daily scheduled cron (`applications:send-interview-reminders` at 09:00 AM) scans for interviews scheduled for the next day.
+  - Sends formatted email notifications with interview dates, company details, role names, and direct links to view the application in the web app.
 - **Overview Dashboard & Analytics**:
   - Live KPIs: Total applications, active interviews, offers, and rejection ratios.
   - Interactive Recharts visualization showing status distributions and application trends.
@@ -83,18 +88,30 @@ job-tracker/
    cp .env.example .env
    ```
 
-4. Configure your owner account in `.env`:
+4. Configure your owner account, database, and Resend credentials in `.env`:
    ```env
    APP_URL=http://localhost:8000
    FRONTEND_URL=http://localhost:5173
 
-   DB_CONNECTION=sqlite
+   # Database (SQLite or Supabase / PostgreSQL)
+   DB_CONNECTION=pgsql
+   DB_HOST=aws-0-ap-southeast-2.pooler.supabase.com
+   DB_PORT=6543
+   DB_DATABASE=postgres
+   DB_USERNAME=your_username
+   DB_PASSWORD=your_password
 
    # Owner account credentials (seeded automatically)
    SEED_ADMIN=true
    ADMIN_EMAIL=your-email@example.com
    ADMIN_NAME="Your Name"
    ADMIN_PASSWORD=your-secure-password
+
+   # Email Delivery (Resend)
+   MAIL_MAILER=resend
+   RESEND_API_KEY=re_your_api_key_here
+   MAIL_FROM_ADDRESS="onboarding@resend.dev"
+   MAIL_FROM_NAME="${APP_NAME}"
    ```
 
 5. Generate application key, run migrations, and seed the owner account:
@@ -154,46 +171,56 @@ Sanctum manages first-party session cookies with `withCredentials: true` and `wi
 job-tracker/
 ├── backend/
 │   ├── app/
+│   │   ├── Console/
+│   │   │   └── Commands/
+│   │   │       └── SendInterviewReminders.php # Daily interview reminder command
 │   │   ├── Http/Controllers/
-│   │   │   ├── Auth/                       # Sanctum login & session handlers
-│   │   │   ├── JobApplicationController.php # Full CRUD & Calendar endpoints
-│   │   │   └── ScrapeJobUrlController.php   # OpenGraph, JSON-LD & LinkedIn parser
+│   │   │   ├── Auth/                          # Sanctum login & session handlers
+│   │   │   ├── JobApplicationController.php    # Full CRUD & Calendar endpoints
+│   │   │   └── ScrapeJobUrlController.php      # OpenGraph, JSON-LD & LinkedIn parser
 │   │   ├── Models/
 │   │   │   ├── JobApplication.php
 │   │   │   └── User.php
+│   │   ├── Notifications/
+│   │   │   └── JobApplicationReminder.php     # Resend email notification
 │   │   └── Policies/
+│   ├── config/
+│   │   ├── mail.php                           # Resend transport configuration
+│   │   └── services.php                       # Resend API key configuration
 │   ├── database/
 │   │   ├── migrations/
 │   │   └── seeders/
-│   │       ├── AdminSeeder.php             # Seeds owner account from .env
+│   │       ├── AdminSeeder.php                # Seeds owner account from .env
 │   │       └── DatabaseSeeder.php
 │   └── routes/
-│       └── api.php                         # API route declarations
+│       ├── api.php                            # API route declarations
+│       └── console.php                        # Scheduled tasks (daily 9:00 AM reminder)
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── layout/                     # Sidebar, MobileNav, Nav config
-│   │   │   └── ui/                         # Reusable design system primitives
+│   │   │   ├── layout/                        # Sidebar, MobileNav, Nav config
+│   │   │   └── ui/                            # Reusable design system primitives
 │   │   ├── features/
-│   │   │   ├── auth/                       # Login form & useAuthSession hook
-│   │   │   ├── calendar/                   # Calendar view & event queries
-│   │   │   ├── job-track/                  # Job table, JobForm, jobService
-│   │   │   ├── settings/                   # Theme, Email verification, Notifications
-│   │   │   └── stats/                      # Overview KPIs & Recharts
+│   │   │   ├── auth/                          # Login form & useAuthSession hook
+│   │   │   ├── calendar/                      # Calendar view & event queries
+│   │   │   ├── job-track/                     # Job table, JobForm, jobService
+│   │   │   ├── settings/                      # Theme, Email verification, Notifications
+│   │   │   └── stats/                         # Overview KPIs & Recharts
 │   │   ├── layouts/
-│   │   │   ├── AppLayout.tsx               # Main layout with sticky sidebar & header toggle
-│   │   │   └── AuthLayout.tsx              # Clean centered layout for login
+│   │   │   ├── AppLayout.tsx                  # Main layout with sticky sidebar & header toggle
+│   │   │   └── AuthLayout.tsx                 # Clean centered layout for login
 │   │   ├── pages/
 │   │   │   ├── OverviewPage.tsx
 │   │   │   ├── JobsPage.tsx
+│   │   │   ├── JobDetailPage.tsx
 │   │   │   ├── CalendarPage.tsx
 │   │   │   ├── ProfilePage.tsx
 │   │   │   └── SettingsPage.tsx
 │   │   ├── lib/
-│   │   │   └── api.ts                      # Axios instance with Sanctum CSRF config
-│   │   ├── App.tsx                         # Client routes & protected route guards
-│   │   └── main.tsx                        # TanStack QueryClient provider setup
+│   │   │   └── api.ts                         # Axios instance with Sanctum CSRF config
+│   │   ├── App.tsx                            # Client routes & protected route guards
+│   │   └── main.tsx                           # TanStack QueryClient provider setup
 │   └── package.json
 ```
 
@@ -210,5 +237,8 @@ job-tracker/
 - `php artisan serve` — Run local PHP development server.
 - `php artisan migrate` — Execute pending database migrations.
 - `php artisan db:seed` — Re-seed the owner administrator account.
+- `php artisan applications:send-interview-reminders` — Manually trigger the interview reminder email job.
+- `php artisan schedule:run` / `php artisan schedule:work` — Execute scheduled background tasks.
 - `php artisan route:list` — List all registered API endpoints.
 - `php artisan test` — Run automated backend test suites.
+
