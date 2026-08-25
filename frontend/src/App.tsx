@@ -24,6 +24,8 @@ function AppContent() {
       <Route path="/" element={<WelcomePage />} />
       <Route path="/welcome" element={<WelcomePage />} />
 
+      <Route path="/register" element={<Navigate to="/login" replace />} />
+
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
       </Route>
@@ -40,7 +42,7 @@ function AppContent() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/overview" replace />} />
+      <Route path="*" element={<Navigate to="/welcome" replace />} />
     </Routes>
   )
 }

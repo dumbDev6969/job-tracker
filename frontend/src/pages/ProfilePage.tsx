@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  getProfile,
+  PROFILE_QUERY_KEY,
+  updateProfile,
+} from "@/features/profile/services/profileService"
 import {
   Briefcase,
   CheckCircle2,
@@ -9,12 +14,14 @@ import {
   ExternalLink,
   FileText,
   Globe,
+  Link2,
   Mail,
   MapPin,
   Phone,
   Plus,
   Save,
   Sparkles,
+  Trash2,
   TrendingUp,
   UploadCloud,
   User,
@@ -72,9 +79,15 @@ import {
 } from "@/features/job-track/services/jobService"
 import { cn } from "@/lib/utils"
 
-type JobSearchStatus = "actively_looking" | "open_to_offers" | "not_looking"
+export type JobSearchStatus = "actively_looking" | "open_to_offers" | "not_looking"
 
-type ProfileData = {
+export type CustomLink = {
+  id: string
+  label: string
+  url: string
+}
+
+export type ProfileData = {
   fullName: string
   headline: string
   location: string
@@ -88,6 +101,7 @@ type ProfileData = {
   portfolioUrl: string
   githubUrl: string
   linkedinUrl: string
+  customLinks: CustomLink[]
   resumeFileName: string
   resumeFileSize: string
   resumeUpdatedAt: string
@@ -107,6 +121,7 @@ const DEFAULT_PROFILE: ProfileData = {
   portfolioUrl: "https://portfolio.dev",
   githubUrl: "https://github.com",
   linkedinUrl: "https://linkedin.com",
+  customLinks: [],
   resumeFileName: "Joshua_Resume_2026.pdf",
   resumeFileSize: "142 KB",
   resumeUpdatedAt: "Aug 2026",
@@ -139,6 +154,7 @@ const EMPLOYMENT_OPTIONS = ["Full-time", "Part-time", "Contract", "Freelance"]
 export function ProfilePage() {
   const { user } = useAuthSession()
   const storageKey = `job_tracker_profile_${user?.id ?? "default"}`
+  const queryClient = useQueryClient()
 
   const [profile, setProfile] = useState<ProfileData>(() => {
     try {
@@ -161,6 +177,51 @@ export function ProfilePage() {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [isUploadingResume, setIsUploadingResume] = useState(false)
 
+  // Fetch profile from backend
+  const { data: backendProfile } = useQuery({
+    queryKey: PROFILE_QUERY_KEY,
+    queryFn: getProfile,
+    enabled: Boolean(user?.id),
+  })
+
+  // Sync backend profile data when received
+  useEffect(() => {
+    if (backendProfile) {
+      const merged: ProfileData = {
+        ...DEFAULT_PROFILE,
+        ...backendProfile,
+        fullName: backendProfile.fullName || user?.name || DEFAULT_PROFILE.fullName,
+      }
+      setProfile(merged)
+      if (!isEditing) {
+        setEditValues(merged)
+      }
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(merged))
+      } catch {
+        // ignore
+      }
+    }
+  }, [backendProfile, user?.name, isEditing, storageKey])
+
+  // Profile update mutation
+  const updateMutation = useMutation({
+    mutationFn: updateProfile,
+    onSuccess: (updated) => {
+      queryClient.setQueryData(PROFILE_QUERY_KEY, updated)
+      setProfile(updated)
+      setEditValues(updated)
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(updated))
+      } catch {
+        // ignore
+      }
+      setIsEditing(false)
+      setSaveSuccess(true)
+      setTimeout(() => setSaveSuccess(false), 3000)
+    },
+  })
+
   // Fetch real job stats from backend for live snapshot
   const { data: applications = [] } = useQuery({
     queryKey: ALL_JOB_APPLICATIONS_KEY,
@@ -176,15 +237,29 @@ export function ProfilePage() {
   }, [user?.name, profile.fullName])
 
   const handleSave = () => {
-    setProfile(editValues)
+    // Clean up empty custom links and normalize URLs
+    const cleanedCustomLinks = (editValues.customLinks || [])
+      .filter((link) => link.label.trim() !== "" || link.url.trim() !== "")
+      .map((link) => ({
+        ...link,
+        label: link.label.trim() || "Link",
+        url: link.url.trim(),
+      }))
+
+    const cleanValues: ProfileData = {
+      ...editValues,
+      customLinks: cleanedCustomLinks,
+    }
+
+    setProfile(cleanValues)
+    setEditValues(cleanValues)
     try {
-      localStorage.setItem(storageKey, JSON.stringify(editValues))
+      localStorage.setItem(storageKey, JSON.stringify(cleanValues))
     } catch {
       // ignore
     }
-    setIsEditing(false)
-    setSaveSuccess(true)
-    setTimeout(() => setSaveSuccess(false), 3000)
+
+    updateMutation.mutate(cleanValues)
   }
 
   const handleCancel = () => {
@@ -229,13 +304,41 @@ export function ProfilePage() {
     }))
   }
 
+  const handleAddCustomLink = () => {
+    const newId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `link_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`
+
+    setEditValues((prev) => ({
+      ...prev,
+      customLinks: [...(prev.customLinks || []), { id: newId, label: "", url: "" }],
+    }))
+  }
+
+  const handleUpdateCustomLink = (id: string, field: "label" | "url", value: string) => {
+    setEditValues((prev) => ({
+      ...prev,
+      customLinks: (prev.customLinks || []).map((link) =>
+        link.id === id ? { ...link, [field]: value } : link
+      ),
+    }))
+  }
+
+  const handleRemoveCustomLink = (id: string) => {
+    setEditValues((prev) => ({
+      ...prev,
+      customLinks: (prev.customLinks || []).filter((link) => link.id !== id),
+    }))
+  }
+
   const handleSimulateResumeUpload = () => {
     setIsUploadingResume(true)
     setTimeout(() => {
       const now = new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" })
       const updated = {
-        ...profile,
-        resumeFileName: `${(profile.fullName || "Candidate").replace(/\s+/g, "_")}_Resume.pdf`,
+        ...(isEditing ? editValues : profile),
+        resumeFileName: `${((isEditing ? editValues.fullName : profile.fullName) || "Candidate").replace(/\s+/g, "_")}_Resume.pdf`,
         resumeUpdatedAt: now,
       }
       setProfile(updated)
@@ -249,17 +352,27 @@ export function ProfilePage() {
     }, 1200)
   }
 
-  // Calculate profile completeness score
+  // Active data for live calculation and reactive header feedback
+  const activeData = isEditing ? editValues : profile
+
+  // Calculate profile completeness score reactively
   const completenessItems = [
-    Boolean(profile.fullName),
-    Boolean(profile.headline),
-    Boolean(profile.bio),
-    Boolean(profile.location),
-    Boolean(profile.phone),
-    profile.targetRoles.length > 0,
-    Boolean(profile.targetSalary),
-    Boolean(profile.linkedinUrl || profile.githubUrl || profile.portfolioUrl),
-    Boolean(profile.resumeFileName),
+    Boolean(activeData.fullName?.trim()),
+    Boolean(activeData.headline?.trim()),
+    Boolean(activeData.bio?.trim()),
+    Boolean(activeData.location?.trim()),
+    Boolean(activeData.phone?.trim()),
+    Boolean(activeData.targetRoles && activeData.targetRoles.length > 0),
+    Boolean(activeData.workplaceTypes && activeData.workplaceTypes.length > 0),
+    Boolean(activeData.employmentTypes && activeData.employmentTypes.length > 0),
+    Boolean(activeData.targetSalary?.trim()),
+    Boolean(
+      activeData.linkedinUrl?.trim() ||
+      activeData.githubUrl?.trim() ||
+      activeData.portfolioUrl?.trim() ||
+      (activeData.customLinks && activeData.customLinks.some((l) => Boolean(l.url?.trim())))
+    ),
+    Boolean(activeData.resumeFileName?.trim()),
   ]
   const completedCount = completenessItems.filter(Boolean).length
   const completenessPercent = Math.round((completedCount / completenessItems.length) * 100)
@@ -269,7 +382,7 @@ export function ProfilePage() {
   const interviewingCount = applications.filter((a) => a.status === "interviewing").length
   const offeredCount = applications.filter((a) => a.status === "offered").length
 
-  const userInitials = (profile.fullName || user?.name || "User")
+  const userInitials = (activeData.fullName || user?.name || "User")
     .split(" ")
     .map((n) => n[0])
     .join("")
@@ -293,9 +406,14 @@ export function ProfilePage() {
               <Button type="button" variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
-              <Button type="button" onClick={handleSave} className="gap-2">
+              <Button
+                type="button"
+                onClick={handleSave}
+                disabled={updateMutation.isPending}
+                className="gap-2 cursor-pointer"
+              >
                 <Save className="size-4" />
-                Save Changes
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
               </Button>
             </>
           ) : (
@@ -330,29 +448,31 @@ export function ProfilePage() {
             <div className="space-y-1.5">
               <div className="flex flex-wrap items-center gap-2.5">
                 <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-                  {profile.fullName || user?.name || "Your Name"}
+                  {activeData.fullName || user?.name || "Your Name"}
                 </h2>
-                <Badge variant="outline" className={cn("gap-1.5 px-2.5 py-0.5", STATUS_CONFIG[profile.status].badgeClass)}>
-                  <span className={cn("size-2 rounded-full", STATUS_CONFIG[profile.status].dotClass)} />
-                  {STATUS_CONFIG[profile.status].label}
+                <Badge variant="outline" className={cn("gap-1.5 px-2.5 py-0.5", STATUS_CONFIG[activeData.status].badgeClass)}>
+                  <span className={cn("size-2 rounded-full", STATUS_CONFIG[activeData.status].dotClass)} />
+                  {STATUS_CONFIG[activeData.status].label}
                 </Badge>
               </div>
 
-              <p className="text-base font-medium text-muted-foreground">{profile.headline}</p>
+              <p className="text-base font-medium text-muted-foreground">{activeData.headline || "Professional Headline"}</p>
 
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pt-1 text-xs text-muted-foreground sm:text-sm">
-                <span className="flex items-center gap-1.5">
-                  <MapPin className="size-3.5 text-primary" />
-                  {profile.location}
-                </span>
+                {activeData.location && (
+                  <span className="flex items-center gap-1.5">
+                    <MapPin className="size-3.5 text-primary" />
+                    {activeData.location}
+                  </span>
+                )}
                 <span className="flex items-center gap-1.5">
                   <Mail className="size-3.5 text-primary" />
                   {user?.email ?? "user@example.com"}
                 </span>
-                {profile.phone && (
+                {activeData.phone && (
                   <span className="flex items-center gap-1.5">
                     <Phone className="size-3.5 text-primary" />
-                    {profile.phone}
+                    {activeData.phone}
                   </span>
                 )}
               </div>
@@ -715,47 +835,136 @@ export function ProfilePage() {
                       className="h-8 text-xs"
                     />
                   </div>
+
+                  {/* Dynamic Custom Links */}
+                  {(editValues.customLinks || []).length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                        Additional Links
+                      </label>
+                      {(editValues.customLinks || []).map((customLink, idx) => (
+                        <div
+                          key={customLink.id}
+                          className="space-y-1.5 rounded-2xl border border-border/80 bg-muted/20 p-2.5"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-medium text-muted-foreground">
+                              Link #{idx + 1}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCustomLink(customLink.id)}
+                              className="flex size-5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+                              aria-label="Remove link"
+                            >
+                              <Trash2 className="size-3.5" />
+                            </button>
+                          </div>
+                          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+                            <Input
+                              placeholder="Label (e.g. Blog, X, Dribbble)"
+                              value={customLink.label}
+                              onChange={(e) => handleUpdateCustomLink(customLink.id, "label", e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                            <Input
+                              placeholder="https://..."
+                              value={customLink.url}
+                              onChange={(e) => handleUpdateCustomLink(customLink.id, "url", e.target.value)}
+                              className="h-8 text-xs"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddCustomLink}
+                    className="w-full gap-1.5 border-dashed text-xs cursor-pointer"
+                  >
+                    <Plus className="size-3.5" />
+                    Add URL
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-2.5">
-                  <a
-                    href={profile.linkedinUrl || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
-                  >
-                    <div className="flex items-center gap-2">
-                      <LinkedinIcon className="size-4 text-blue-600" />
-                      <span>LinkedIn Profile</span>
-                    </div>
-                    <ExternalLink className="size-3.5 text-muted-foreground" />
-                  </a>
+                  {profile.linkedinUrl && (
+                    <a
+                      href={profile.linkedinUrl.startsWith("http") ? profile.linkedinUrl : `https://${profile.linkedinUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
+                    >
+                      <div className="flex items-center gap-2">
+                        <LinkedinIcon className="size-4 text-blue-600" />
+                        <span>LinkedIn Profile</span>
+                      </div>
+                      <ExternalLink className="size-3.5 text-muted-foreground" />
+                    </a>
+                  )}
 
-                  <a
-                    href={profile.githubUrl || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
-                  >
-                    <div className="flex items-center gap-2">
-                      <GithubIcon className="size-4" />
-                      <span>GitHub Profile</span>
-                    </div>
-                    <ExternalLink className="size-3.5 text-muted-foreground" />
-                  </a>
+                  {profile.githubUrl && (
+                    <a
+                      href={profile.githubUrl.startsWith("http") ? profile.githubUrl : `https://${profile.githubUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
+                    >
+                      <div className="flex items-center gap-2">
+                        <GithubIcon className="size-4" />
+                        <span>GitHub Profile</span>
+                      </div>
+                      <ExternalLink className="size-3.5 text-muted-foreground" />
+                    </a>
+                  )}
 
-                  <a
-                    href={profile.portfolioUrl || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Globe className="size-4 text-emerald-600" />
-                      <span>Portfolio Website</span>
-                    </div>
-                    <ExternalLink className="size-3.5 text-muted-foreground" />
-                  </a>
+                  {profile.portfolioUrl && (
+                    <a
+                      href={profile.portfolioUrl.startsWith("http") ? profile.portfolioUrl : `https://${profile.portfolioUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Globe className="size-4 text-emerald-600" />
+                        <span>Portfolio Website</span>
+                      </div>
+                      <ExternalLink className="size-3.5 text-muted-foreground" />
+                    </a>
+                  )}
+
+                  {(profile.customLinks || []).map((link) => {
+                    if (!link.url && !link.label) return null
+                    const href = link.url.startsWith("http") ? link.url : `https://${link.url}`
+                    return (
+                      <a
+                        key={link.id}
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Link2 className="size-4 text-primary" />
+                          <span>{link.label || link.url}</span>
+                        </div>
+                        <ExternalLink className="size-3.5 text-muted-foreground" />
+                      </a>
+                    )
+                  })}
+
+                  {!profile.linkedinUrl &&
+                    !profile.githubUrl &&
+                    !profile.portfolioUrl &&
+                    (!profile.customLinks || profile.customLinks.length === 0) && (
+                      <p className="py-2 text-center text-xs text-muted-foreground">
+                        No online presence links added yet. Click &apos;Edit Profile&apos; to add URLs.
+                      </p>
+                    )}
                 </div>
               )}
             </CardContent>

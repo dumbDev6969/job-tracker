@@ -9,9 +9,11 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Notifications\JobApplicationReminder;
 use App\Models\JobApplication;
-
+use App\Models\Profile;
 
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -33,8 +35,13 @@ class User extends Authenticatable
         ];
     }
 
-    public function jobApplications()
+    public function jobApplications(): HasMany
     {
         return $this->hasMany(JobApplication::class);
+    }
+
+    public function profile(): HasOne
+    {
+        return $this->hasOne(Profile::class);
     }
 }

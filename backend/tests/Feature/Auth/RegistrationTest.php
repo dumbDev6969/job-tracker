@@ -9,7 +9,7 @@ class RegistrationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_new_users_can_register(): void
+    public function test_registration_is_disabled(): void
     {
         $response = $this->post('/register', [
             'name' => 'Test User',
@@ -18,7 +18,7 @@ class RegistrationTest extends TestCase
             'password_confirmation' => 'password',
         ]);
 
-        $this->assertAuthenticated();
-        $response->assertNoContent();
+        $this->assertGuest();
+        $response->assertNotFound();
     }
 }

@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\JobApplicationController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ScrapeJobUrlController;
 
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
@@ -13,4 +14,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('scrape-job-url', ScrapeJobUrlController::class);
     Route::get('job-applications/calendar', [JobApplicationController::class, 'calendar']);
     Route::apiResource('job-applications', JobApplicationController::class);
+    Route::get('profile', [ProfileController::class, 'show']);
+    Route::put('profile', [ProfileController::class, 'update']);
 });
