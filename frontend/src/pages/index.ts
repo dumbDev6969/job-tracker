@@ -4,3 +4,5 @@ export { CalendarPage } from "./CalendarPage"
 export { ProfilePage } from "./ProfilePage"
 export { SettingsPage } from "./SettingsPage"
 export { JobDetailPage } from "./JobDetailPage"
+export { WelcomePage } from "./WelcomePage"
+

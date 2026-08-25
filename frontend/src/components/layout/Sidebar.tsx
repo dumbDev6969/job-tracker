@@ -1,7 +1,6 @@
 import { useState } from "react"
 import {
   ChevronsUpDown,
-  GalleryVerticalEnd,
   LogOut,
   Settings2,
   User,

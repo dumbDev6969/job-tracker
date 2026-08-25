@@ -1,0 +1,151 @@
+{
+  "kpis": [
+    {
+      "key": "saved",
+      "label": "Saved",
+      "count": 4,
+      "ratio": 14
+    },
+    {
+      "key": "applied",
+      "label": "Applied",
+      "count": 14,
+      "ratio": 50
+    },
+    {
+      "key": "interviewing",
+      "label": "Interviewing",
+      "count": 6,
+      "ratio": 21
+    },
+    {
+      "key": "offered",
+      "label": "Offered",
+      "count": 2,
+      "ratio": 7
+    },
+    {
+      "key": "rejected",
+      "label": "Rejected",
+      "count": 2,
+      "ratio": 7
+    }
+  ],
+  "chartBars": [
+    { "date": "May 10", "count": 2 },
+    { "date": "May 12", "count": 4 },
+    { "date": "May 15", "count": 1 },
+    { "date": "May 18", "count": 5 },
+    { "date": "May 21", "count": 3 },
+    { "date": "May 24", "count": 6 },
+    { "date": "May 28", "count": 4 },
+    { "date": "Jun 02", "count": 3 }
+  ],
+  "jobs": [
+    {
+      "id": 1,
+      "status": "offered",
+      "company": "Stripe",
+      "role": "Senior Frontend Engineer",
+      "location": "Remote / San Francisco",
+      "salary": "$185k - $210k",
+      "appliedDate": "May 10, 2026",
+      "dateSaved": "May 08, 2026",
+      "referral": true
+    },
+    {
+      "id": 2,
+      "status": "interviewing",
+      "company": "Figma",
+      "role": "Staff UI/UX Systems Engineer",
+      "location": "San Francisco, CA",
+      "salary": "$195k - $225k",
+      "appliedDate": "May 14, 2026",
+      "dateSaved": "May 12, 2026",
+      "referral": true
+    },
+    {
+      "id": 3,
+      "status": "interviewing",
+      "company": "Linear",
+      "role": "Product Engineer (React & TS)",
+      "location": "Remote",
+      "salary": "$170k - $195k",
+      "appliedDate": "May 18, 2026",
+      "dateSaved": "May 15, 2026",
+      "referral": false
+    },
+    {
+      "id": 4,
+      "status": "applied",
+      "company": "Vercel",
+      "role": "Developer Experience Engineer",
+      "location": "Remote",
+      "salary": "$160k - $185k",
+      "appliedDate": "May 22, 2026",
+      "dateSaved": "May 20, 2026",
+      "referral": true
+    },
+    {
+      "id": 5,
+      "status": "applied",
+      "company": "Airbnb",
+      "role": "Full Stack Engineer",
+      "location": "San Francisco / Hybrid",
+      "salary": "$175k - $200k",
+      "appliedDate": "May 25, 2026",
+      "dateSaved": "May 24, 2026",
+      "referral": false
+    },
+    {
+      "id": 6,
+      "status": "saved",
+      "company": "Supabase",
+      "role": "Backend Platform Engineer",
+      "location": "Remote",
+      "salary": "$165k - $190k",
+      "appliedDate": "-",
+      "dateSaved": "May 28, 2026",
+      "referral": false
+    }
+  ],
+  "features": [
+    {
+      "title": "Pipeline Stages",
+      "description": "Track jobs through Saved, Applied, Interviewing, Offered, and Rejected with instant status updates.",
+      "category": "tracking"
+    },
+    {
+      "title": "Visual Analytics",
+      "description": "Analyze application velocity, referral conversion efficiency, and stage ratios in real-time.",
+      "category": "analytics"
+    },
+    {
+      "title": "Timeline & Reminders",
+      "description": "Keep tabs on interview schedules, take-home challenge deadlines, and follow-up milestones.",
+      "category": "calendar"
+    },
+    {
+      "title": "Data Privacy",
+      "description": "Your job search history, compensation notes, and personal logs remain strictly confidential.",
+      "category": "security"
+    }
+  ],
+  "workflowSteps": [
+    {
+      "step": 1,
+      "title": "Log Applications",
+      "description": "Quickly record company, role, salary range, application dates, and whether you applied via referral."
+    },
+    {
+      "step": 2,
+      "title": "Manage Pipeline",
+      "description": "Update stages as you advance to technical rounds, recruiter screens, and negotiation phases."
+    },
+    {
+      "step": 3,
+      "title": "Land The Offer",
+      "description": "Compare offers, track total compensation packages, and celebrate landing your dream career step."
+    }
+  ]
+}

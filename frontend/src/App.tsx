@@ -13,6 +13,7 @@ import {
   OverviewPage,
   ProfilePage,
   SettingsPage,
+  WelcomePage,
 } from '@/pages'
 
 function AppContent() {
@@ -20,7 +21,8 @@ function AppContent() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<WelcomePage />} />
+      <Route path="/welcome" element={<WelcomePage />} />
 
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
