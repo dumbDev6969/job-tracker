@@ -139,12 +139,10 @@ export function Login() {
         </FieldGroup>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Button type="button" variant="link" className="h-auto p-0 text-sm">
-          Sign up
-        </Button>
-      </p>
+      <div className="mt-6 rounded-xl border border-border/60 bg-muted/30 p-3 text-center text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">Personal Portfolio Instance</p>
+        <p className="mt-0.5">Public registration is closed. Please sign in with authorized credentials.</p>
+      </div>
     </>
   )
 }
