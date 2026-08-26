@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\UpdateProfileRequest;
+use App\Http\Requests\UploadResumeRequest;
 use App\Http\Resources\Profile\ProfileResource;
 use App\Models\Profile;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class ProfileController extends Controller
 {
@@ -45,5 +47,64 @@ class ProfileController extends Controller
         $profile->setRelation('user', $user);
 
         return (new ProfileResource($profile))->response()->setStatusCode(200);
+    }
+
+    /**
+     * Securely upload a resume/CV document for the authenticated user.
+     */
+    public function uploadResume(UploadResumeRequest $request)
+    {
+        $user = $request->user();
+        $file = $request->file('resume');
+
+        $profile = $user->profile()->first();
+
+        // Clean up old resume file if it exists on disk
+        if ($profile && !empty($profile->resume_path) && Storage::disk('local')->exists($profile->resume_path)) {
+            Storage::disk('local')->delete($profile->resume_path);
+        }
+
+        $originalName = $file->getClientOriginalName();
+        $bytes = $file->getSize();
+
+        if ($bytes >= 1048576) {
+            $formattedSize = number_format($bytes / 1048576, 1) . ' MB';
+        } else {
+            $formattedSize = max(1, round($bytes / 1024)) . ' KB';
+        }
+
+        // Store with randomized hash name inside user-scoped folder in private local disk
+        $path = $file->store("resumes/{$user->id}", 'local');
+
+        $profile = $user->profile()->updateOrCreate(
+            ['user_id' => $user->id],
+            [
+                'resume_path' => $path,
+                'resume_file_name' => $originalName,
+                'resume_file_size' => $formattedSize,
+                'resume_updated_at' => now()->format('M Y'),
+            ]
+        );
+
+        $profile->setRelation('user', $user);
+
+        return (new ProfileResource($profile))->response()->setStatusCode(200);
+    }
+
+    /**
+     * Download the authenticated user's uploaded resume document.
+     */
+    public function downloadResume(Request $request)
+    {
+        $user = $request->user();
+        $profile = $user->profile()->first();
+
+        if (!$profile || empty($profile->resume_path) || !Storage::disk('local')->exists($profile->resume_path)) {
+            return response()->json(['message' => 'Resume not found.'], 404);
+        }
+
+        $downloadName = $profile->resume_file_name ?: 'Resume.pdf';
+
+        return Storage::disk('local')->download($profile->resume_path, $downloadName);
     }
 }

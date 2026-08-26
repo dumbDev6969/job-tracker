@@ -27,6 +27,7 @@ class Profile extends Model
         'github_url',
         'linkedin_url',
         'custom_links',
+        'resume_path',
         'resume_file_name',
         'resume_file_size',
         'resume_updated_at',

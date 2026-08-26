@@ -1,7 +1,6 @@
-import { useMemo, useState, type ReactNode } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { useQuery, useQueryClient } from "@tanstack/react-query"
-
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   columnFacetingFeature,
   columnFilteringFeature,
@@ -21,19 +20,7 @@ import {
   useTable,
   type Column,
 } from "@tanstack/react-table"
-import {
-  ArrowUpDown,
-  Check,
-  ChevronDown,
-  Copy,
-  Inbox,
-  Loader2,
-  MoreHorizontal,
-  Pencil,
-  PlusCircle,
-  RefreshCw,
-  Trash2,
-} from "lucide-react"
+import { ArrowUpDown, Inbox, RefreshCw } from "lucide-react"
 
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import { EditJobModal } from "./EditJobModal"
@@ -42,31 +29,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuGroupLabel,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Separator } from "@/components/ui/separator"
-import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
@@ -79,6 +43,10 @@ import {
   listJobApplications,
 } from "../services/jobService"
 import { JOB_STATUSES, type JobApplication, type JobApplicationStatus } from "../types"
+import { JobsPagination } from "./JobsPagination"
+import { JobsRowActions } from "./JobsRowActions"
+import { JobsTableBody } from "./JobsTableBody"
+import { JobsToolbar } from "./JobsToolbar"
 
 const features = tableFeatures({
   rowSelectionFeature,
@@ -98,9 +66,9 @@ const features = tableFeatures({
   sortFns: { alphanumeric: sortFn_alphanumeric },
 })
 
-type Features = typeof features
+export type JobsTableFeatures = typeof features
 
-const columnHelper = createColumnHelper<Features, JobApplication>()
+const columnHelper = createColumnHelper<JobsTableFeatures, JobApplication>()
 
 const STATUS_BADGE_CLASS: Record<JobApplicationStatus, string> = {
   saved: "bg-muted text-muted-foreground",
@@ -144,7 +112,7 @@ function SortableHeader<TValue>({
   column,
 }: {
   label: string
-  column: Column<Features, JobApplication, TValue>
+  column: Column<JobsTableFeatures, JobApplication, TValue>
 }) {
   return (
     <Button
@@ -160,154 +128,12 @@ function SortableHeader<TValue>({
   )
 }
 
-type RowActionsProps = {
-  job: JobApplication
-  onEditRequest: (job: JobApplication) => void
-  onDeleteRequest: (job: JobApplication) => void
-}
-
-function RowActions({ job, onEditRequest, onDeleteRequest }: RowActionsProps) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button variant="ghost" size="icon" className="size-8" aria-label="Open row actions">
-            <MoreHorizontal className="size-4" />
-          </Button>
-        }
-      />
-      <DropdownMenuContent align="end">
-        <DropdownMenuGroup>
-          <DropdownMenuGroupLabel>Actions</DropdownMenuGroupLabel>
-          <DropdownMenuItem onClick={() => onEditRequest(job)}>
-            <Pencil />
-            Edit job
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigator.clipboard.writeText(String(job.id))}>
-            <Copy />
-            Copy job ID
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem variant="destructive" onClick={() => onDeleteRequest(job)}>
-          <Trash2 />
-          Delete
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
-function StatusFacetedFilter({
-  column,
-}: {
-  column: Column<Features, JobApplication, unknown> | undefined
-}) {
-  if (!column) {
-    return null
-  }
-
-  const selected = new Set((column.getFilterValue() as JobApplicationStatus[] | undefined) ?? [])
-  const facets = column.getFacetedUniqueValues()
-
-  return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button variant="outline" size="sm" className="h-8 gap-2 border-dashed">
-            <PlusCircle className="size-4" />
-            Status
-            {selected.size > 0 ? (
-              <>
-                <Separator orientation="vertical" className="mx-1 h-4" />
-                {selected.size > 2 ? (
-                  <Badge variant="secondary" className="rounded-sm px-1 font-normal">
-                    {selected.size} selected
-                  </Badge>
-                ) : (
-                  JOB_STATUSES.filter((status) => selected.has(status.value)).map((status) => (
-                    <Badge
-                      key={status.value}
-                      variant="secondary"
-                      className="rounded-sm px-1 font-normal"
-                    >
-                      {status.label}
-                    </Badge>
-                  ))
-                )}
-              </>
-            ) : null}
-          </Button>
-        }
-      />
-      <PopoverContent className="w-56 p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Filter status..." />
-          <CommandList>
-            <CommandEmpty>No results.</CommandEmpty>
-            <CommandGroup>
-              {JOB_STATUSES.map((status) => {
-                const isSelected = selected.has(status.value)
-                return (
-                  <CommandItem
-                    key={status.value}
-                    onSelect={() => {
-                      const next = new Set(selected)
-                      if (isSelected) {
-                        next.delete(status.value)
-                      } else {
-                        next.add(status.value)
-                      }
-                      const values = Array.from(next)
-                      column.setFilterValue(values.length ? values : undefined)
-                    }}
-                  >
-                    <div
-                      className={cn(
-                        "flex size-4 items-center justify-center rounded-sm border border-primary",
-                        isSelected
-                          ? "bg-primary text-primary-foreground"
-                          : "opacity-50 [&_svg]:invisible"
-                      )}
-                    >
-                      <Check className="size-3.5" />
-                    </div>
-                    <span>{status.label}</span>
-                    <span className="ml-auto flex size-4 items-center justify-center text-xs text-muted-foreground">
-                      {facets.get(status.value) ?? 0}
-                    </span>
-                  </CommandItem>
-                )
-              })}
-            </CommandGroup>
-            {selected.size > 0 ? (
-              <>
-                <CommandSeparator />
-                <CommandGroup>
-                  <CommandItem
-                    onSelect={() => column.setFilterValue(undefined)}
-                    className="justify-center text-center"
-                  >
-                    Clear filters
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            ) : null}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
 export function Jobs() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [editingTarget, setEditingTarget] = useState<JobApplication | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<JobApplication | null>(null)
-  const [isDeleting, setIsDeleting] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const {
     data,
@@ -320,14 +146,35 @@ export function Jobs() {
     queryFn: () => listJobApplications(page),
   })
 
-  const jobs = data?.data ?? []
-  const pagination = {
-    currentPage: data?.meta.current_page ?? 1,
-    lastPage: data?.meta.last_page ?? 1,
-    total: data?.meta.total ?? 0,
-    hasPreviousPage: Boolean(data?.links.prev),
-    hasNextPage: Boolean(data?.links.next),
-  }
+  const jobs = useMemo(() => data?.data ?? [], [data?.data])
+
+  const pagination = useMemo(
+    () => ({
+      currentPage: data?.meta.current_page ?? 1,
+      lastPage: data?.meta.last_page ?? 1,
+      total: data?.meta.total ?? 0,
+      hasPreviousPage: Boolean(data?.links.prev),
+      hasNextPage: Boolean(data?.links.next),
+    }),
+    [data]
+  )
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteJobApplication(id),
+    onSuccess: async () => {
+      if (page > 1 && jobs.length === 1) {
+        setPage((prev) => prev - 1)
+      }
+      setDeleteTarget(null)
+      await queryClient.invalidateQueries({ queryKey: JOB_APPLICATIONS_KEY })
+    },
+  })
+
+  const handleConfirmDelete = useCallback(() => {
+    if (deleteTarget) {
+      deleteMutation.mutate(deleteTarget.id)
+    }
+  }, [deleteTarget, deleteMutation])
 
   const columns = useMemo(
     () =>
@@ -385,7 +232,7 @@ export function Jobs() {
           id: "actions",
           header: () => <span className="sr-only">Actions</span>,
           cell: ({ row }) => (
-            <RowActions
+            <JobsRowActions
               job={row.original}
               onEditRequest={setEditingTarget}
               onDeleteRequest={setDeleteTarget}
@@ -406,33 +253,20 @@ export function Jobs() {
     getColumnCanGlobalFilter: (column) => column.id === "company" || column.id === "role",
   })
 
-  const hideableColumns = table.getAllColumns().filter((column) => column.getCanHide())
+  const hideableColumns = useMemo(
+    () => table.getAllColumns().filter((column) => column.getCanHide()),
+    [table]
+  )
+
   const rows = table.getRowModel().rows
   const selectedCount = table.getFilteredSelectedRowModel().rows.length
   const totalCount = table.getFilteredRowModel().rows.length
 
-  async function handleConfirmDelete() {
-    if (!deleteTarget) {
-      return
-    }
-
-    setIsDeleting(true)
-    setDeleteError(null)
-    try {
-      await deleteJobApplication(deleteTarget.id)
-      if (page > 1 && jobs.length === 1) {
-        setPage((prev) => prev - 1)
-      }
-      setDeleteTarget(null)
-      await queryClient.invalidateQueries({ queryKey: JOB_APPLICATIONS_KEY })
-    } catch {
-      setDeleteError("Failed to delete the job application. Please try again.")
-    } finally {
-      setIsDeleting(false)
-    }
-  }
-
-  const errorMessage = isError ? "Failed to load job applications." : deleteError
+  const errorMessage = isError
+    ? "Failed to load job applications."
+    : deleteMutation.isError
+      ? "Failed to delete the job application. Please try again."
+      : null
 
   if (!isLoading && !errorMessage && jobs.length === 0) {
     return (
@@ -442,54 +276,6 @@ export function Jobs() {
         icon={<Inbox className="size-6" />}
       />
     )
-  }
-
-  let bodyContent: ReactNode
-
-  if (isLoading) {
-    bodyContent = (
-      <TableRow>
-        <TableCell colSpan={columns.length} className="h-32 text-center">
-          <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            Loading job applications...
-          </span>
-        </TableCell>
-      </TableRow>
-    )
-  } else if (rows.length === 0) {
-    bodyContent = (
-      <TableRow>
-        <TableCell colSpan={columns.length} className="h-32 text-center text-sm text-muted-foreground">
-          No results.
-        </TableCell>
-      </TableRow>
-    )
-  } else {
-    bodyContent = rows.map((row) => (
-      <TableRow
-        key={row.id}
-        data-state={row.getIsSelected() ? "selected" : undefined}
-        className="cursor-pointer hover:bg-muted/50"
-        onClick={(event) => {
-          const target = event.target as HTMLElement
-          if (
-            target.closest('[role="checkbox"]') ||
-            target.closest("button") ||
-            target.closest('[role="menuitem"]')
-          ) {
-            return
-          }
-          navigate(`/jobs/${row.original.id}`)
-        }}
-      >
-        {row.getVisibleCells().map((cell) => (
-          <TableCell key={cell.id}>
-            <table.FlexRender cell={cell} />
-          </TableCell>
-        ))}
-      </TableRow>
-    ))
   }
 
   return (
@@ -510,43 +296,19 @@ export function Jobs() {
         </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-1 flex-wrap items-center gap-2">
-          <Input
-            placeholder="Filter jobs..."
-            value={(table.state.globalFilter as string | undefined) ?? ""}
-            onChange={(event) => table.setGlobalFilter(event.target.value)}
-            className="h-8 max-w-sm"
-          />
-          <StatusFacetedFilter column={table.getColumn("status")} />
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button variant="outline" size="sm" className="gap-1.5">
-                Columns
-                <ChevronDown className="size-3.5" />
-              </Button>
-            }
-          />
-          <DropdownMenuContent align="end">
-            {hideableColumns.map((column) => (
-              <DropdownMenuCheckboxItem
-                key={column.id}
-                checked={column.getIsVisible()}
-                onCheckedChange={(checked) => column.toggleVisibility(checked)}
-                className="capitalize"
-                onSelect={(event) => event.preventDefault()}
-              >
-                {COLUMN_LABELS[column.id] ?? column.id}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      <div className={cn("w-full rounded-xl border border-border transition-opacity duration-200", isFetching && !isLoading && "opacity-60")}>
+      <JobsToolbar
+        searchValue={(table.state.globalFilter as string | undefined) ?? ""}
+        onSearchChange={(value) => table.setGlobalFilter(value)}
+        statusColumn={table.getColumn("status")}
+        hideableColumns={hideableColumns}
+        columnLabels={COLUMN_LABELS}
+      />
+      <div
+        className={cn(
+          "w-full rounded-xl border border-border transition-opacity duration-200",
+          isFetching && !isLoading && "opacity-60"
+        )}
+      >
         <Table className="w-full">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -559,39 +321,30 @@ export function Jobs() {
               </TableRow>
             ))}
           </TableHeader>
-          <TableBody>{bodyContent}</TableBody>
+          <TableBody>
+            <JobsTableBody
+              isLoading={isLoading}
+              rows={rows}
+              columnsCount={columns.length}
+              FlexRender={table.FlexRender}
+              onRowClick={(job) => navigate(`/jobs/${job.id}`)}
+            />
+          </TableBody>
         </Table>
       </div>
-
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {selectedCount} of {totalCount} row(s) selected on this page.
-        </p>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Page {pagination.currentPage} of {pagination.lastPage} ({pagination.total} total)
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={!pagination.hasPreviousPage || isFetching}
-          >
-            Previous
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => p + 1)}
-            disabled={!pagination.hasNextPage || isFetching}
-          >
-            {isFetching && !isLoading ? <Loader2 className="mr-1 size-3.5 animate-spin" /> : null}
-            Next
-          </Button>
-        </div>
-      </div>
+      <JobsPagination
+        selectedCount={selectedCount}
+        totalCount={totalCount}
+        currentPage={pagination.currentPage}
+        lastPage={pagination.lastPage}
+        total={pagination.total}
+        hasPreviousPage={pagination.hasPreviousPage}
+        hasNextPage={pagination.hasNextPage}
+        isFetching={isFetching}
+        isLoading={isLoading}
+        onPrevious={() => setPage((p) => Math.max(1, p - 1))}
+        onNext={() => setPage((p) => p + 1)}
+      />
 
       <ConfirmDialog
         open={deleteTarget !== null}
@@ -603,9 +356,12 @@ export function Jobs() {
         }
         confirmLabel="Delete"
         destructive
-        isLoading={isDeleting}
+        isLoading={deleteMutation.isPending}
         onConfirm={handleConfirmDelete}
-        onCancel={() => setDeleteTarget(null)}
+        onCancel={() => {
+          deleteMutation.reset()
+          setDeleteTarget(null)
+        }}
       />
 
       <EditJobModal
@@ -620,4 +376,4 @@ export function Jobs() {
       />
     </div>
   )
-}
+}

@@ -34,6 +34,7 @@ class ProfileResource extends JsonResource
             'resume_file_name' => $this->resume_file_name ?? '',
             'resume_file_size' => $this->resume_file_size ?? '',
             'resume_updated_at' => $this->resume_updated_at ?? '',
+            'resume_url' => !empty($this->resume_path) ? url('/api/profile/resume/download') : null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
