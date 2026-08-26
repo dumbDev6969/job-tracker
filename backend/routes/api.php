@@ -16,4 +16,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('job-applications', JobApplicationController::class);
     Route::get('profile', [ProfileController::class, 'show']);
     Route::put('profile', [ProfileController::class, 'update']);
+    Route::post('profile/resume', [ProfileController::class, 'uploadResume']);
+    Route::get('profile/resume/download', [ProfileController::class, 'downloadResume']);
 });
