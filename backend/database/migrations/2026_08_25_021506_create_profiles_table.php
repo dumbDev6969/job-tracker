@@ -1,4 +1,3 @@
-
 <?php
 
 use Illuminate\Database\Migrations\Migration;
@@ -28,6 +27,7 @@ return new class extends Migration
             $table->string('github_url')->nullable();
             $table->string('linkedin_url')->nullable();
             $table->json('custom_links')->nullable();
+            $table->string('resume_path')->nullable();
             $table->string('resume_file_name')->nullable();
             $table->string('resume_file_size')->nullable();
             $table->string('resume_updated_at')->nullable();
