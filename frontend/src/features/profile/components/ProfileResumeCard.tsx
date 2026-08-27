@@ -1,5 +1,5 @@
 import { memo, useRef } from "react"
-import { FileText, Download, UploadCloud, AlertCircle, Loader2 } from "lucide-react"
+import { FileText, Download, UploadCloud, AlertCircle, Loader2, FileUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -95,8 +95,14 @@ export const ProfileResumeCard = memo(function ProfileResumeCard({
             </Button>
           </div>
         ) : (
-          <div className="rounded-2xl border border-dashed border-border bg-muted/10 p-4 text-center">
-            <p className="text-xs text-muted-foreground">No resume uploaded yet.</p>
+          <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-muted/10 p-5 text-center">
+            <div className="mb-2 flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
+              <FileUp className="size-5" />
+            </div>
+            <p className="text-xs font-medium text-foreground">No resume uploaded yet</p>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              Upload your resume or CV to easily manage and attach it to applications.
+            </p>
           </div>
         )}
 

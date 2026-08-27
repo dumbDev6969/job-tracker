@@ -15,9 +15,9 @@ export const DEFAULT_PROFILE: ProfileData = {
   githubUrl: "https://github.com",
   linkedinUrl: "https://linkedin.com",
   customLinks: [],
-  resumeFileName: "Joshua_Resume_2026.pdf",
-  resumeFileSize: "142 KB",
-  resumeUpdatedAt: "Aug 2026",
+  resumeFileName: "",
+  resumeFileSize: "",
+  resumeUpdatedAt: "",
 }
 
 export const STATUS_CONFIG: Record<
