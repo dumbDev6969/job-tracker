@@ -44,8 +44,6 @@ class UpdateProfileRequest extends FormRequest
             'custom_links.*.label' => ['nullable', 'string', 'max:100'],
             'custom_links.*.url' => ['nullable', 'string', 'max:500'],
             'resume_file_name' => ['nullable', 'string', 'max:255'],
-            'resume_file_size' => ['nullable', 'string', 'max:50'],
-            'resume_updated_at' => ['nullable', 'string', 'max:50'],
         ];
     }
 }

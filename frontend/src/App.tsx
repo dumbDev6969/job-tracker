@@ -38,7 +38,7 @@ function AppContent() {
           <Route path="/calendar" element={<CalendarPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/debug-jobs" element={<div className="p-6"><Jobs /></div>} />
+          {import.meta.env.DEV && <Route path="/debug-jobs" element={<div className="p-6"><Jobs /></div>} />}
         </Route>
       </Route>
 

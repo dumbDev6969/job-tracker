@@ -67,12 +67,6 @@ class ProfileController extends Controller
         $originalName = $file->getClientOriginalName();
         $bytes = $file->getSize();
 
-        if ($bytes >= 1048576) {
-            $formattedSize = number_format($bytes / 1048576, 1) . ' MB';
-        } else {
-            $formattedSize = max(1, round($bytes / 1024)) . ' KB';
-        }
-
         // Store with randomized hash name inside user-scoped folder in private local disk
         $path = $file->store("resumes/{$user->id}", 'local');
 
@@ -81,8 +75,8 @@ class ProfileController extends Controller
             [
                 'resume_path' => $path,
                 'resume_file_name' => $originalName,
-                'resume_file_size' => $formattedSize,
-                'resume_updated_at' => now()->format('M Y'),
+                'resume_file_size_bytes' => $bytes,
+                'resume_uploaded_at' => now(),
             ]
         );
 
@@ -103,7 +97,8 @@ class ProfileController extends Controller
             return response()->json(['message' => 'Resume not found.'], 404);
         }
 
-        $downloadName = $profile->resume_file_name ?: 'Resume.pdf';
+        $downloadName = basename($profile->resume_file_name ?: 'Resume.pdf');
+        $downloadName = preg_replace('/[^\x20-\x7E]/', '', $downloadName) ?: 'Resume.pdf';
 
         return Storage::disk('local')->download($profile->resume_path, $downloadName);
     }

@@ -34,8 +34,8 @@ class ProfileFactory extends Factory
             'github_url' => fake()->url(),
             'linkedin_url' => fake()->url(),
             'resume_file_name' => 'resume.pdf',
-            'resume_file_size' => '150 KB',
-            'resume_updated_at' => now()->format('M Y'),
+            'resume_file_size_bytes' => 153600,
+            'resume_uploaded_at' => now(),
         ];
     }
 }

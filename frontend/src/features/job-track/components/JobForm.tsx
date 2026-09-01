@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import axios from "axios"
 import { Loader2, Sparkles } from "lucide-react"
 
 import { FormField } from "@/components/FormField"
@@ -209,7 +210,23 @@ export function JobForm({ onSubmit, className, submitLabel = "Save job" }: JobFo
       resetForm()
     } catch (error) {
       console.error("Failed to save job application:", error)
-      setSubmitError("We couldn’t save this job. Please check your connection and try again.")
+      if (axios.isAxiosError(error) && error.response?.status === 422) {
+        const fieldErrors = error.response.data?.errors as Record<string, string[]> | undefined
+        if (fieldErrors) {
+          const mapped: Partial<Record<keyof JobFormValues, string>> = {}
+          for (const [key, messages] of Object.entries(fieldErrors)) {
+            if (messages[0]) {
+              mapped[key as keyof JobFormValues] = messages[0]
+            }
+          }
+          setErrors(mapped)
+          setSubmitError("Please fix the highlighted fields.")
+        } else {
+          setSubmitError(error.response.data?.message ?? "Validation failed. Please check your input.")
+        }
+      } else {
+        setSubmitError("We couldn’t save this job. Please check your connection and try again.")
+      }
     } finally {
       setIsSubmitting(false)
     }

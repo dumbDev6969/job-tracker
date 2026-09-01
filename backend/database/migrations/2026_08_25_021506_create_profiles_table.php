@@ -29,8 +29,8 @@ return new class extends Migration
             $table->json('custom_links')->nullable();
             $table->string('resume_path')->nullable();
             $table->string('resume_file_name')->nullable();
-            $table->string('resume_file_size')->nullable();
-            $table->string('resume_updated_at')->nullable();
+            $table->unsignedBigInteger('resume_file_size_bytes')->nullable();
+            $table->timestamp('resume_uploaded_at')->nullable();
             $table->timestamps();
         });
     }

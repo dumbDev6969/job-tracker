@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Outlet } from "react-router-dom"
 import { PanelLeft } from "lucide-react"
 
@@ -16,16 +16,16 @@ export function AppLayout() {
   })
 
   const toggleSidebar = () => {
-    setIsCollapsed((prev) => {
-      const next = !prev
-      try {
-        localStorage.setItem("job_tracker_sidebar_collapsed", String(next))
-      } catch {
-        // ignore
-      }
-      return next
-    })
+    setIsCollapsed((prev) => !prev)
   }
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("job_tracker_sidebar_collapsed", String(isCollapsed))
+    } catch {
+      // ignore
+    }
+  }, [isCollapsed])
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">

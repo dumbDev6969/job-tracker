@@ -29,8 +29,8 @@ class Profile extends Model
         'custom_links',
         'resume_path',
         'resume_file_name',
-        'resume_file_size',
-        'resume_updated_at',
+        'resume_file_size_bytes',
+        'resume_uploaded_at',
     ];
 
     protected function casts(): array
@@ -40,6 +40,7 @@ class Profile extends Model
             'workplace_types' => 'array',
             'employment_types' => 'array',
             'custom_links' => 'array',
+            'resume_uploaded_at' => 'datetime',
         ];
     }
 

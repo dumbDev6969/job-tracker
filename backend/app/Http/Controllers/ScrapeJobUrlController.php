@@ -40,6 +40,13 @@ class ScrapeJobUrlController extends Controller
 
         $url = $validated['url'];
 
+        $host = parse_url($url, PHP_URL_HOST);
+        $ip = gethostbyname($host);
+        
+        if (!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            return response()->json(['message' => 'The provided URL is not allowed.'], 422);
+        }
+
         try {
             $response = Http::timeout(5)
                 ->withHeaders([

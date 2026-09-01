@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { Link } from "react-router-dom"
 import {
   ArrowRight,
@@ -108,13 +108,14 @@ export function WelcomePage() {
 
   const jobsList = sampleData.jobs as MockJob[]
 
-  const filteredJobs = jobsList.filter((job) => {
-    const matchesFilter = selectedStatusFilter === "all" || job.status === selectedStatusFilter
-    const matchesSearch =
-      job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      job.role.toLowerCase().includes(searchQuery.toLowerCase())
-    return matchesFilter && matchesSearch
-  })
+  const filteredJobs = useMemo(() =>
+    jobsList.filter((job) => {
+      const matchesFilter = selectedStatusFilter === "all" || job.status === selectedStatusFilter
+      const matchesSearch =
+        job.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.role.toLowerCase().includes(searchQuery.toLowerCase())
+      return matchesFilter && matchesSearch
+    }), [jobsList, selectedStatusFilter, searchQuery])
 
   return (
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/20">

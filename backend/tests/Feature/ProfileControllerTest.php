@@ -65,8 +65,6 @@ class ProfileControllerTest extends TestCase
                 ['id' => 'link-1', 'label' => 'Portfolio V2', 'url' => 'https://v2.portfolio.dev'],
             ],
             'resume_file_name' => 'Joshua_CV_2026.pdf',
-            'resume_file_size' => '210 KB',
-            'resume_updated_at' => 'Aug 2026',
         ];
 
         $response = $this->actingAs($user)->putJson('/api/profile', $payload);

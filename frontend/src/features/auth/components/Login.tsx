@@ -75,6 +75,7 @@ export function Login() {
                 setEmail(event.target.value)
               }}
               required
+              aria-describedby={errorMessage ? "login-error" : undefined}
             />
           </Field>
 
@@ -97,6 +98,7 @@ export function Login() {
                 }}
                 className="pr-10"
                 required
+                aria-describedby={errorMessage ? "login-error" : undefined}
               />
               <button
                 type="button"
@@ -131,7 +133,7 @@ export function Login() {
             </label>
           </Field>
 
-          {errorMessage && <FieldError>{errorMessage}</FieldError>}
+          {errorMessage && <FieldError id="login-error">{errorMessage}</FieldError>}
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting ? "Logging in..." : "Log in"}

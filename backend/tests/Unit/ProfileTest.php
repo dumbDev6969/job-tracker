@@ -33,8 +33,8 @@ class ProfileTest extends TestCase
                 ['id' => '1', 'label' => 'Blog', 'url' => 'https://blog.dev'],
             ],
             'resume_file_name' => 'Joshua_Resume.pdf',
-            'resume_file_size' => '142 KB',
-            'resume_updated_at' => 'Aug 2026',
+            'resume_file_size_bytes' => 145408,
+            'resume_uploaded_at' => now(),
         ]);
 
         $this->assertInstanceOf(Profile::class, $user->profile);

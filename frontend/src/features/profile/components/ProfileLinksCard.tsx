@@ -144,7 +144,7 @@ export const ProfileLinksCard = memo(function ProfileLinksCard({
               <a
                 href={profile.linkedinUrl.startsWith("http") ? profile.linkedinUrl : `https://${profile.linkedinUrl}`}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
               >
                 <div className="flex items-center gap-2">
@@ -159,7 +159,7 @@ export const ProfileLinksCard = memo(function ProfileLinksCard({
               <a
                 href={profile.githubUrl.startsWith("http") ? profile.githubUrl : `https://${profile.githubUrl}`}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
               >
                 <div className="flex items-center gap-2">
@@ -174,7 +174,7 @@ export const ProfileLinksCard = memo(function ProfileLinksCard({
               <a
                 href={profile.portfolioUrl.startsWith("http") ? profile.portfolioUrl : `https://${profile.portfolioUrl}`}
                 target="_blank"
-                rel="noreferrer"
+                rel="noopener noreferrer"
                 className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
               >
                 <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export const ProfileLinksCard = memo(function ProfileLinksCard({
                   key={link.id}
                   href={href}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                   className="flex items-center justify-between rounded-xl border border-border bg-muted/20 p-2.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/40"
                 >
                   <div className="flex items-center gap-2">

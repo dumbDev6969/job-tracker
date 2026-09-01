@@ -32,11 +32,24 @@ class ProfileResource extends JsonResource
             'linkedin_url' => $this->linkedin_url ?? '',
             'custom_links' => $this->custom_links ?? [],
             'resume_file_name' => $this->resume_file_name ?? '',
-            'resume_file_size' => $this->resume_file_size ?? '',
-            'resume_updated_at' => $this->resume_updated_at ?? '',
+            'resume_file_size' => $this->formatFileSize($this->resume_file_size_bytes),
+            'resume_updated_at' => $this->resume_uploaded_at?->format('M Y') ?? '',
             'resume_url' => !empty($this->resume_path) ? url('/api/profile/resume/download') : null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
+    }
+
+    private function formatFileSize(?int $bytes): string
+    {
+        if ($bytes === null || $bytes === 0) {
+            return '';
+        }
+
+        if ($bytes >= 1048576) {
+            return number_format($bytes / 1048576, 1) . ' MB';
+        }
+
+        return max(1, (int) round($bytes / 1024)) . ' KB';
     }
 }
