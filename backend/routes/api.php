@@ -25,3 +25,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     Route::get('profile/resume/download', [ProfileController::class, 'downloadResume']);
 });
+
+Route::get('/test', function () {
+    return response()->json([
+        'message' => 'API is working',
+    ]);
+});
