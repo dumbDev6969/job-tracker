@@ -1,6 +1,4 @@
-import axios from "axios"
-
-import { API_BASE_URL, api } from "@/lib/api"
+import { api } from "@/lib/api"
 import type { ProfileData } from "../profile.types"
 
 export const PROFILE_QUERY_KEY = ["profile"] as const
@@ -28,12 +26,6 @@ export type BackendProfileResponse = {
   resume_url?: string | null
   created_at?: string
   updated_at?: string
-}
-
-async function getCsrfCookie() {
-  return axios.get(`${API_BASE_URL}/sanctum/csrf-cookie`, {
-    withCredentials: true,
-  })
 }
 
 export function transformBackendToFrontendProfile(data: BackendProfileResponse): ProfileData {
@@ -87,26 +79,21 @@ export async function getProfile(): Promise<ProfileData> {
 }
 
 export async function updateProfile(payload: ProfileData): Promise<ProfileData> {
-  await getCsrfCookie()
   const backendPayload = transformFrontendToBackendProfile(payload)
   const response = await api.put<{ data: BackendProfileResponse }>("/api/profile", backendPayload)
   return transformBackendToFrontendProfile(response.data.data)
 }
 
 export async function uploadResume(file: File): Promise<ProfileData> {
-  await getCsrfCookie()
   const formData = new FormData()
   formData.append("resume", file)
 
-  const response = await axios.post<{ data: BackendProfileResponse }>(
-    `${API_BASE_URL}/api/profile/resume`,
+  const response = await api.post<{ data: BackendProfileResponse }>(
+    "/api/profile/resume",
     formData,
     {
-      withCredentials: true,
-      withXSRFToken: true,
       headers: {
-        Accept: "application/json",
-        "X-Requested-With": "XMLHttpRequest",
+        "Content-Type": "multipart/form-data",
       },
     }
   )

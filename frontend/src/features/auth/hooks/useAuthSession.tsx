@@ -8,7 +8,7 @@ import {
 } from "react"
 import axios from "axios"
 
-import { getCurrentUser, logout } from "@/features/auth/services/authService"
+import { getCurrentUser, logout, restoreAuthToken } from "@/features/auth/services/authService"
 import type { AuthUser } from "@/features/auth/types"
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "error"
@@ -48,6 +48,7 @@ export function AuthSessionProvider({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const refreshSession = useCallback(async () => {
+    restoreAuthToken()
     setStatus("loading")
     setErrorMessage(null)
 

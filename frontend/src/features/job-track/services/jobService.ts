@@ -1,6 +1,4 @@
-import axios from "axios"
-
-import { API_BASE_URL, api } from "@/lib/api"
+import { api } from "@/lib/api"
 
 import type { JobApplication } from "../types"
 
@@ -50,14 +48,7 @@ export type JobApplicationPayload = {
   interview_date?: string | null
 }
 
-async function getCsrfCookie() {
-  return axios.get(`${API_BASE_URL}/sanctum/csrf-cookie`, {
-    withCredentials: true,
-  })
-}
-
 export async function createJobApplication(payload: JobApplicationPayload) {
-  await getCsrfCookie()
   const response = await api.post("/api/job-applications", payload)
   return response.data
 }
@@ -90,13 +81,11 @@ export async function updateJobApplication(
   id: number | string,
   payload: Partial<JobApplicationPayload>
 ): Promise<JobApplication> {
-  await getCsrfCookie()
   const response = await api.put<{ data: JobApplication }>(`/api/job-applications/${id}`, payload)
   return response.data.data
 }
 
 export async function deleteJobApplication(id: number | string): Promise<void> {
-  await getCsrfCookie()
   await api.delete(`/api/job-applications/${id}`)
 }
 
@@ -106,7 +95,6 @@ export type ScrapeResult = {
 }
 
 export async function scrapeJobUrl(url: string): Promise<ScrapeResult> {
-  await getCsrfCookie()
   const response = await api.post<ScrapeResult>("/api/scrape-job-url", { url })
   return response.data
 }
